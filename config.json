@@ -1,0 +1,9 @@
+{
+  "api": {
+    "key_encrypted": "U2FsdGVkX18lYIANUHzBKWd2fxT7FOPcOCXgPzGhSjxRRV45WjggnrsZ+2fAZ6ezhnv9mzbd5wqnypPOU1+tgvliwjVScdGXdguPfbsbRoDU2rlalAJBJVwnCUfBJeCq",
+    "url": "https://openrouter.ai/api/v1/chat/completions",
+    "default_model": "deepseek/deepseek-r1:free",
+    "referer": "http://localhost",
+    "title": "AI Chat Test"
+  }
+} 

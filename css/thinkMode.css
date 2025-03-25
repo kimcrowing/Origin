@@ -1,0 +1,243 @@
+/* Think按钮禁用状态 */
+.think-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 消息提示 */
+.message-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  padding: 12px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  animation: slideIn 0.3s ease;
+  color: white;
+  min-width: 250px;
+}
+
+.message-success {
+  background-color: #27ae60;
+}
+
+.message-error {
+  background-color: #e74c3c;
+}
+
+.message-warning {
+  background-color: #f39c12;
+}
+
+.message-info {
+  background-color: #3498db;
+}
+
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Think模式对话框 */
+.think-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.think-dialog-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  width: 80%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.think-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.think-dialog-header h3 {
+  margin: 0;
+  color: #4a6fa5;
+}
+
+.think-close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  padding: 5px;
+}
+
+.think-close-btn:hover {
+  color: #e74c3c;
+}
+
+.think-dialog-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.think-description {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.think-input-container {
+  margin-bottom: 16px;
+}
+
+#think-input {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.think-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.btn.btn-primary {
+  background-color: #4a6fa5;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn.btn-primary:hover {
+  background-color: #3a5a84;
+}
+
+.think-result-area {
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  padding: 20px;
+  min-height: 200px;
+}
+
+.think-placeholder {
+  color: #999;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.think-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.think-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(74, 111, 165, 0.2);
+  border-top-color: #4a6fa5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.think-result {
+  padding: 16px;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.think-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.think-result-header h4 {
+  margin: 0;
+  color: #4a6fa5;
+}
+
+.btn-copy-result {
+  background-color: #f1f1f1;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-copy-result:hover {
+  background-color: #e1e1e1;
+}
+
+.think-result-content {
+  line-height: 1.6;
+}
+
+.think-error {
+  text-align: center;
+  padding: 40px 0;
+  color: #e74c3c;
+}
+
+.think-error i {
+  font-size: 32px;
+  margin-bottom: 16px;
+} 

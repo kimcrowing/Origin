@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "id": "user_1",
+      "email_hash": "33e8075e9970de0cfea955afd4644bb2",
+      "password_hash": "482c811da5d5b4bc6d497ffa98491e38",
+      "name_encrypted": "U2FsdGVkX1+CkzDArwUMcLfqQz7oD5LG2XL5dKw9U0g=",
+      "initials": "GL",
+      "avatar": null,
+      "created_at": 1677649200000
+    },
+    {
+      "id": "user_2",
+      "email_hash": "951b64610eada9c5c0244e97f5f2fb14",
+      "password_hash": "7b211022ef7c1f39fc50027be9df1b8c",
+      "name_encrypted": "U2FsdGVkX18TE+2kg6hdn1NSP7QoVn9XcRht/qz5yLU=",
+      "initials": "KC",
+      "avatar": null,
+      "created_at": 1711497600000
+    }
+  ]
+}

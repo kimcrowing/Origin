@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API密钥加密工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #3a89e0;
+            margin-bottom: 20px;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        textarea {
+            height: 200px;
+            resize: vertical;
+        }
+        button {
+            background-color: #3a89e0;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2d79e0;
+        }
+        .result {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        code {
+            display: block;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f1f1f1;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .copy-btn {
+            margin-top: 10px;
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>API密钥加密工具</h1>
+    
+    <div class="warning">
+        <strong>警告：</strong> 此工具仅供管理员使用。请勿将加密后的配置文件共享给不受信任的第三方。即使加密后，敏感信息仍有泄露风险。
+    </div>
+    
+    <div class="form-group">
+        <label for="api-key">API密钥</label>
+        <input type="text" id="api-key" placeholder="输入您的OpenRouter API密钥">
+    </div>
+    
+    <div class="form-group">
+        <label for="encryption-key">加密密钥（必须与crypto.js中的ENCRYPTION_KEY一致）</label>
+        <input type="text" id="encryption-key" value="Origin-SecretKey-2023">
+    </div>
+    
+    <div class="form-group">
+        <label for="api-url">API URL</label>
+        <input type="text" id="api-url" value="https://openrouter.ai/api/v1/chat/completions">
+    </div>
+    
+    <div class="form-group">
+        <label for="default-model">默认模型</label>
+        <input type="text" id="default-model" value="deepseek/deepseek-r1:free">
+    </div>
+    
+    <div class="form-group">
+        <label for="referer">Referer（部署域名）</label>
+        <input type="text" id="referer" value="http://localhost">
+    </div>
+    
+    <div class="form-group">
+        <label for="title">应用标题</label>
+        <input type="text" id="title" value="AI Chat Test">
+    </div>
+    
+    <button id="encrypt-btn">生成加密配置</button>
+    
+    <div class="result" id="result" style="display: none;">
+        <h3>加密后的配置文件内容</h3>
+        <p>复制以下内容到config.json文件中：</p>
+        <code id="encrypted-config"></code>
+        <button class="copy-btn" id="copy-btn">复制到剪贴板</button>
+    </div>
+    
+    <script>
+        document.getElementById('encrypt-btn').addEventListener('click', function() {
+            const apiKey = document.getElementById('api-key').value.trim();
+            const encryptionKey = document.getElementById('encryption-key').value.trim();
+            const apiUrl = document.getElementById('api-url').value.trim();
+            const defaultModel = document.getElementById('default-model').value.trim();
+            const referer = document.getElementById('referer').value.trim();
+            const title = document.getElementById('title').value.trim();
+            
+            if (!apiKey) {
+                alert('请输入API密钥');
+                return;
+            }
+            
+            if (!encryptionKey) {
+                alert('请输入加密密钥');
+                return;
+            }
+            
+            try {
+                // 加密API密钥
+                const encryptedKey = CryptoJS.AES.encrypt(apiKey, encryptionKey).toString();
+                
+                // 创建配置对象
+                const config = {
+                    api: {
+                        key_encrypted: encryptedKey,
+                        url: apiUrl,
+                        default_model: defaultModel,
+                        referer: referer,
+                        title: title
+                    }
+                };
+                
+                // 格式化JSON
+                const formattedConfig = JSON.stringify(config, null, 2);
+                
+                // 显示结果
+                document.getElementById('encrypted-config').textContent = formattedConfig;
+                document.getElementById('result').style.display = 'block';
+            } catch (error) {
+                alert('加密失败: ' + error.message);
+            }
+        });
+        
+        document.getElementById('copy-btn').addEventListener('click', function() {
+            const configText = document.getElementById('encrypted-config').textContent;
+            
+            navigator.clipboard.writeText(configText)
+                .then(() => {
+                    const copyBtn = document.getElementById('copy-btn');
+                    copyBtn.textContent = '已复制！';
+                    setTimeout(() => {
+                        copyBtn.textContent = '复制到剪贴板';
+                    }, 2000);
+                })
+                .catch(err => {
+                    alert('复制失败: ' + err.message);
+                });
+        });
+    </script>
+</body>
+</html> 

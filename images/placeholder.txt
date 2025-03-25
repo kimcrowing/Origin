@@ -1,0 +1,7 @@
+placeholder文件
+
+需要添加以下图片：
+1. logo.png - Grok网站logo（可以是简单的字母G，紫色渐变背景）
+2. avatar.png - 默认用户头像
+
+如果没有这些图片，JavaScript会自动创建canvas占位图形。 
