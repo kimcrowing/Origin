@@ -96,9 +96,20 @@
                             <span>Think</span>
                         </button>
                         
-                        <div class="model-selector">
-                            <span>Origin AI</span>
+                        <div class="model-selector" id="model-selector">
+                            <span id="current-model">Origin R1 Zero</span>
                             <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                            
+                            <div class="model-dropdown">
+                                <div class="model-option" data-model="deepseek/deepseek-r1-zero:free">
+                                    <i class="fas fa-check model-selected"></i>
+                                    <span>Origin R1 Zero</span>
+                                </div>
+                                <div class="model-option" data-model="deepseek/deepseek-chat-v3-0324:free">
+                                    <i class="fas fa-check model-selected"></i>
+                                    <span>Origin DeepSeek</span>
+                                </div>
+                            </div>
                         </div>
                         
                         <button class="submit-btn" title="发送">

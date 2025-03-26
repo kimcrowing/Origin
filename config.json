@@ -1,9 +1,16 @@
 {
   "api": {
     "key_encrypted": "U2FsdGVkX18lYIANUHzBKWd2fxT7FOPcOCXgPzGhSjxRRV45WjggnrsZ+2fAZ6ezhnv9mzbd5wqnypPOU1+tgvliwjVScdGXdguPfbsbRoDU2rlalAJBJVwnCUfBJeCq",
-    "url": "https://openrouter.ai/api/v1/chat/completions",
-    "default_model": "deepseek/deepseek-r1:free",
+    "apiBaseUrl": "https://openrouter.ai/api",
+    "defaultModel": "deepseek/deepseek-r1-zero:free",
+    "deepSearchModel": "deepseek/deepseek-chat-v3-0324:free",
+    "thinkingModel": "deepseek/deepseek-chat-v3-0324:free",
     "referer": "http://localhost",
-    "title": "AI Chat Test"
+    "title": "Origin AI Chat",
+    "key_segments": {
+      "segment1": "U2FsdGVkX19t8WEdejwgWuN/bAkRzrt+cMw0bBvNhZ49YDHmrivT+Ci84uyVjhiC",
+      "segment2": "U2FsdGVkX19ZIBUWOT1R0LrEUa4qDzRzB5AD/HFxJNZzBWH0SMMOd5m0095+H/NA",
+      "segment3": "U2FsdGVkX19+iBz/oX1t0USa2u6dG5RgK+YM4rrzFMzkoNPOk84vHL6PdGEptWVM"
+    }
   }
-} 
+}
