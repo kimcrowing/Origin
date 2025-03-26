@@ -42,6 +42,9 @@ function init() {
     // 检查用户登录状态
     checkUserLoginStatus();
     
+    // 计算并设置滚动条宽度
+    setScrollbarWidthVariable();
+    
     // 更新用户界面
     updateUserMenuButton();
     updateUserUI();
@@ -2781,4 +2784,27 @@ function initModelSelector() {
         const modelName = selectedItem.querySelector('.model-name').textContent;
         modelSelector.querySelector('span').textContent = modelName;
     }
+}
+
+// 计算并设置滚动条宽度
+function setScrollbarWidthVariable() {
+    // 创建一个带滚动条的div元素
+    const outer = document.createElement('div');
+    outer.style.visibility = 'hidden';
+    outer.style.overflow = 'scroll';
+    document.body.appendChild(outer);
+    
+    // 创建一个内部div
+    const inner = document.createElement('div');
+    outer.appendChild(inner);
+    
+    // 计算滚动条宽度 (outer宽度 - inner宽度)
+    const scrollbarWidth = outer.offsetWidth - inner.offsetWidth;
+    
+    // 移除临时元素
+    outer.parentNode.removeChild(outer);
+    
+    // 设置CSS变量
+    document.documentElement.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
+    console.log('滚动条宽度:', scrollbarWidth);
 } 

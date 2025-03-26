@@ -459,6 +459,9 @@ button:focus {
     background-color: var(--background-color);
     transition: background-color 0.3s ease;
     border-top: none;
+    --scrollbar-width: 17px; /* 预估的滚动条宽度 */
+    width: calc(100% - var(--scrollbar-width));
+    box-sizing: border-box;
 }
 
 .input-container {
