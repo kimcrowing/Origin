@@ -689,15 +689,28 @@ function initTheme() {
     // 检查localStorage中是否有保存的主题
     const savedTheme = localStorage.getItem('theme');
     
+    // 强制为所有设备应用相同的主题逻辑
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
-    } else if (savedTheme === 'dark') {
+        document.documentElement.classList.add('light-theme');
+    } else if (savedTheme === 'dark' || savedTheme === null) {
+        // 默认使用暗色主题（如果没有明确保存过主题）
         document.body.classList.remove('light-theme');
+        document.documentElement.classList.remove('light-theme');
+        // 添加强制暗色主题标记
+        document.documentElement.classList.add('dark-theme-enforced');
     } else {
         // 如果没有保存的主题，则使用系统主题
         const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
         if (!prefersDarkScheme.matches) {
             document.body.classList.add('light-theme');
+            document.documentElement.classList.add('light-theme');
+        } else {
+            // 确保移除浅色主题
+            document.body.classList.remove('light-theme');
+            document.documentElement.classList.remove('light-theme');
+            // 添加强制暗色主题标记
+            document.documentElement.classList.add('dark-theme-enforced');
         }
     }
     
@@ -708,6 +721,14 @@ function initTheme() {
 // 切换主题
 function toggleTheme() {
     document.body.classList.toggle('light-theme');
+    document.documentElement.classList.toggle('light-theme');
+    
+    // 处理强制暗色主题标记
+    if (document.body.classList.contains('light-theme')) {
+        document.documentElement.classList.remove('dark-theme-enforced');
+    } else {
+        document.documentElement.classList.add('dark-theme-enforced');
+    }
     
     // 保存主题到localStorage
     const isLightTheme = document.body.classList.contains('light-theme');

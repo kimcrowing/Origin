@@ -1395,4 +1395,39 @@ button:focus {
     .login-header h2 {
         font-size: 16px;
     }
+}
+
+/* 确保移动设备上的暗黑主题应用 */
+:root.dark-theme-enforced,
+:root.dark-theme-enforced body,
+.dark-theme-enforced .app-container {
+    --background-color: var(--dark-background-color);
+    --text-color: var(--dark-text-color);
+    --secondary-text: var(--dark-secondary-text);
+    --border-color: var(--dark-border-color);
+    --input-bg: var(--dark-input-bg);
+    --button-hover: var(--dark-button-hover);
+    --menu-bg: var(--dark-menu-bg);
+    color-scheme: dark;
+}
+
+/* 手机端暗黑主题特定样式 */
+@media (max-width: 768px) {
+    :root.dark-theme-enforced .input-container,
+    :root.dark-theme-enforced .user-message .message-content,
+    :root.dark-theme-enforced .message-content pre,
+    :root.dark-theme-enforced .message-content code,
+    :root.dark-theme-enforced .submit-btn {
+        background-color: var(--dark-input-bg);
+        color: var(--dark-text-color);
+        border-color: var(--dark-border-color);
+    }
+    
+    :root.dark-theme-enforced .header,
+    :root.dark-theme-enforced .app-container,
+    :root.dark-theme-enforced .chat-area,
+    :root.dark-theme-enforced .input-footer {
+        background-color: var(--dark-background-color);
+        color: var(--dark-text-color);
+    }
 } 
