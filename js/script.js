@@ -1091,44 +1091,134 @@ function formatMessage(message) {
 
 // 格式化Markdown
 function formatMarkdown(markdown) {
-    // 简单的Markdown解析
-    let html = markdown;
+    if (!markdown) return '';
     
-    // 处理代码块
-    html = html.replace(/```(\w*)([\s\S]*?)```/g, (match, language, code) => {
-        return `<pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`;
+    // 保存代码块，防止内部被错误解析
+    const codeBlocks = [];
+    markdown = markdown.replace(/```(\w*)([\s\S]*?)```/g, (match, language, code) => {
+        const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+        codeBlocks.push(`<pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`);
+        return placeholder;
     });
     
-    // 处理行内代码
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // 保存行内代码
+    const inlineCodes = [];
+    markdown = markdown.replace(/`([^`]+)`/g, (match, code) => {
+        const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
+        inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+        return placeholder;
+    });
+    
+    // 处理表格
+    markdown = markdown.replace(/^\|(.+)\|$/gm, (match, content) => {
+        const cells = content.split('|').map(cell => cell.trim());
+        return `<tr>${cells.map(cell => `<td>${cell}</td>`).join('')}</tr>`;
+    });
+    
+    // 处理表格分隔行 |------|------|
+    markdown = markdown.replace(/^\|([-:\|\s]+)\|$/gm, (match, content) => {
+        // 检测是否是表格分隔行
+        if (!/^[\s\-:|]+$/.test(content)) return match;
+        
+        // 移除这一行并添加表格标记
+        return '<table-separator>';
+    });
+    
+    // 组合表格
+    markdown = markdown.replace(/<tr>.*?<\/tr>\s*<table-separator>\s*(<tr>.*?<\/tr>\s*)+/g, (match) => {
+        const rows = match.split(/\s*<table-separator>\s*/);
+        const headerRow = rows[0];
+        const bodyRows = rows.slice(1).join('');
+        
+        return `<table><thead>${headerRow.replace(/<td>/g, '<th>').replace(/<\/td>/g, '</th>')}</thead><tbody>${bodyRows}</tbody></table>`;
+    });
+    
+    // 处理图片 ![alt](src)
+    markdown = markdown.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1">');
+    
+    // 处理链接 [text](url)
+    markdown = markdown.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    
+    // 处理引用块
+    markdown = markdown.replace(/^>\s*(.*?)$/gm, '<blockquote>$1</blockquote>');
+    // 合并相邻的引用块
+    markdown = markdown.replace(/<\/blockquote>\s*<blockquote>/g, '<br>');
+    
+    // 处理水平线
+    markdown = markdown.replace(/^(\*{3,}|-{3,})$/gm, '<hr>');
     
     // 处理标题
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    markdown = markdown.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    markdown = markdown.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    markdown = markdown.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    markdown = markdown.replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+    markdown = markdown.replace(/^##### (.*$)/gm, '<h5>$1</h5>');
+    
+    // 处理任务列表
+    markdown = markdown.replace(/^- \[ \] (.*$)/gm, '<div class="task-list-item"><input type="checkbox" disabled> $1</div>');
+    markdown = markdown.replace(/^- \[x\] (.*$)/gmi, '<div class="task-list-item"><input type="checkbox" checked disabled> $1</div>');
+    
+    // 处理删除线
+    markdown = markdown.replace(/~~(.*?)~~/g, '<del>$1</del>');
     
     // 处理粗体
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    markdown = markdown.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
     // 处理斜体
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    markdown = markdown.replace(/\*(.*?)\*/g, '<em>$1</em>');
     
-    // 处理列表
-    html = html.replace(/^\s*•\s*(.*$)/gm, '<li>$1</li>');
-    html = html.replace(/^\s*-\s*(.*$)/gm, '<li>$1</li>');
-    html = html.replace(/^\s*\d+\.\s*(.*$)/gm, '<li>$1</li>');
+    // 处理有序和无序列表
+    // 首先将列表项转换为特殊标记
+    markdown = markdown.replace(/^\s*[\*\-•]\s+(.*$)/gm, '<ul-item>$1</ul-item>');
+    markdown = markdown.replace(/^\s*(\d+)\.\s+(.*$)/gm, '<ol-item>$2</ol-item>');
     
-    // 将连续的li元素包装在ul或ol中
-    html = html.replace(/(<li>.*<\/li>)\s*(<li>)/g, '$1\n<li>');
-    html = html.replace(/(<li>.*<\/li>(\n)?)+/g, '<ul>$&</ul>');
+    // 然后将连续的列表项组合成列表
+    markdown = markdown.replace(/(<ul-item>.*?<\/ul-item>(?:\n|$))+/g, (match) => {
+        return '<ul>' + match.replace(/<ul-item>(.*?)<\/ul-item>(?:\n|$)/g, '<li>$1</li>') + '</ul>';
+    });
     
-    // 处理链接
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    markdown = markdown.replace(/(<ol-item>.*?<\/ol-item>(?:\n|$))+/g, (match) => {
+        return '<ol>' + match.replace(/<ol-item>(.*?)<\/ol-item>(?:\n|$)/g, '<li>$1</li>') + '</ol>';
+    });
     
     // 处理段落
-    html = html.replace(/\n\s*\n/g, '\n<br><br>\n');
+    // 先分割成行
+    const lines = markdown.split('\n');
+    let inParagraph = false;
     
-    return html;
+    for (let i = 0; i < lines.length; i++) {
+        // 如果当前行不是HTML标签开始，且不是空行
+        if (!/^<\w+/.test(lines[i]) && lines[i].trim() !== '' && !inParagraph) {
+            lines[i] = '<p>' + lines[i];
+            inParagraph = true;
+        } 
+        // 如果当前行是空行或者下一行是HTML标签开始，结束段落
+        else if (inParagraph && (lines[i].trim() === '' || (i < lines.length-1 && /^<\w+/.test(lines[i+1])))) {
+            lines[i] = lines[i] + '</p>';
+            inParagraph = false;
+        }
+    }
+    // 如果最后还在段落中，关闭段落
+    if (inParagraph) {
+        lines[lines.length-1] += '</p>';
+    }
+    
+    markdown = lines.join('\n');
+    
+    // 处理空行
+    markdown = markdown.replace(/\n\s*\n/g, '\n<br>\n');
+    
+    // 恢复行内代码
+    inlineCodes.forEach((code, index) => {
+        markdown = markdown.replace(`__INLINE_CODE_${index}__`, code);
+    });
+    
+    // 恢复代码块
+    codeBlocks.forEach((code, index) => {
+        markdown = markdown.replace(`__CODE_BLOCK_${index}__`, code);
+    });
+    
+    return markdown;
 }
 
 // 转义HTML特殊字符

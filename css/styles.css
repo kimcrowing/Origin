@@ -1707,4 +1707,166 @@ button:focus {
     .admin-content {
         padding: 15px;
     }
+}
+
+/* Markdown样式增强 */
+.message-content {
+    /* 现有样式 */
+}
+
+/* 表格样式 */
+.message-content table {
+    border-collapse: collapse;
+    margin: 10px 0;
+    width: 100%;
+    max-width: 100%;
+    background-color: transparent;
+}
+
+.message-content table th,
+.message-content table td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+}
+
+.message-content table th {
+    background-color: rgba(128, 128, 128, 0.1);
+    font-weight: 600;
+}
+
+.message-content table tr:nth-child(even) {
+    background-color: rgba(128, 128, 128, 0.05);
+}
+
+/* 引用块样式 */
+.message-content blockquote {
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-left: 4px solid var(--accent-blue);
+    background-color: rgba(128, 128, 128, 0.1);
+    color: var(--secondary-text);
+}
+
+/* 水平线样式 */
+.message-content hr {
+    border: none;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 15px 0;
+}
+
+/* 任务列表样式 */
+.message-content .task-list-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.message-content .task-list-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* 图片样式 */
+.message-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 删除线样式 */
+.message-content del {
+    text-decoration: line-through;
+    color: var(--secondary-text);
+}
+
+/* 标题样式增强 */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.message-content h1 {
+    font-size: 1.8em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.message-content h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.message-content h3 {
+    font-size: 1.3em;
+}
+
+.message-content h4 {
+    font-size: 1.2em;
+}
+
+.message-content h5 {
+    font-size: 1.1em;
+}
+
+/* 段落样式 */
+.message-content p {
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
+/* 列表样式增强 */
+.message-content ul,
+.message-content ol {
+    margin: 10px 0 10px 20px;
+    padding-left: 15px;
+}
+
+.message-content li {
+    margin: 5px 0;
+}
+
+.message-content ul {
+    list-style-type: disc;
+}
+
+.message-content ol {
+    list-style-type: decimal;
+}
+
+/* 代码块样式增强 */
+.message-content pre {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 15px 0;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.light-theme .message-content pre {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+.message-content code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    background-color: rgba(0, 0, 0, 0.15);
+    padding: 3px 5px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.light-theme .message-content code {
+    background-color: rgba(0, 0, 0, 0.05);
 } 
