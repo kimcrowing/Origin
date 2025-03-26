@@ -35,6 +35,9 @@ let currentSessionId = null;
 
 // 初始化函数
 function init() {
+    // 检查用户登录状态
+    checkUserLoginStatus();
+    
     // 设置提交按钮点击事件
     submitBtn.addEventListener('click', function(e) {
         handleSubmit(e);
@@ -605,7 +608,7 @@ function saveSessions() {
 // 显示欢迎消息
 function showWelcomeMessage() {
     // 根据登录状态显示不同的欢迎消息
-    if (!authService || !authService.isLoggedIn) {
+    if ((!authService || !authService.isLoggedIn) && !currentUser) {
         // 未登录状态，显示登录提示
         const welcomeMessage = `# 欢迎使用 Origin AI
 
@@ -619,7 +622,7 @@ function showWelcomeMessage() {
         addMessageToUI(formatMarkdown(welcomeMessage), 'ai');
     } else {
         // 已登录状态，显示欢迎消息
-        const user = authService.getCurrentUser();
+        const user = currentUser || authService.getCurrentUser();
         const welcomeMessage = `# 欢迎回来，${user.name}！
 
 您已成功登录，可以开始与AI助手对话了。
@@ -792,7 +795,7 @@ function updateUserMenuButton() {
     if (authService && authService.isLoggedIn) {
         const user = authService.getCurrentUser();
         if (user) {
-            userMenuBtn.textContent = user.name.substring(0, 2).toUpperCase();
+            userMenuBtn.textContent = user.initials || 'U';
             userMenuBtn.title = `${user.name} (${user.email})`;
         }
     } else {
@@ -805,7 +808,7 @@ function updateUserMenuButton() {
 function handleUserMenuClick(e) {
     e.stopPropagation(); // 阻止事件冒泡
     
-    if (!authService || !authService.isLoggedIn) {
+    if ((!authService || !authService.isLoggedIn) && !currentUser) {
         // 未登录，显示登录框
         showLoginModal();
         return;
@@ -883,7 +886,7 @@ function handleSubmit(event) {
     }
     
     // 检查用户是否已登录
-    if (!authService || !authService.isLoggedIn) {
+    if ((!authService || !authService.isLoggedIn) && !currentUser) {
         // 显示登录提示信息
         addMessageToUI("请先登录后再使用AI对话功能。", "ai");
         // 显示登录弹窗

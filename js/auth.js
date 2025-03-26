@@ -18,7 +18,20 @@ class AuthService {
     try {
       // 使用crypto.js中的验证函数
       const userData = validateUserToken(token);
-      return userData !== null;
+      
+      if (userData !== null) {
+        // 更新全局currentUser变量，确保与checkUserLoginStatus保持一致
+        window.currentUser = {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          initials: getInitials(userData.name),
+          avatar: userData.avatar,
+          rememberMe: true
+        };
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error('检查登录状态出错:', e);
       return false;
