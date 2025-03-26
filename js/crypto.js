@@ -84,9 +84,9 @@ function validateUserToken(token) {
         
         const userData = JSON.parse(decrypted);
         
-        // 检查令牌是否过期（默认7天）
+        // 检查令牌是否过期（改为4小时）
         const tokenAge = Date.now() - userData.timestamp;
-        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7天
+        const maxAge = 4 * 60 * 60 * 1000; // 4小时
         
         if (tokenAge > maxAge) {
             return null; // 令牌已过期
