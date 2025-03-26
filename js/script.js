@@ -1435,24 +1435,276 @@ function checkUserLoginStatus() {
 
 // 更新用户界面
 function updateUserUI() {
-    if (currentUser) {
+    if (authService.isLoggedIn) {
+        const user = authService.getCurrentUser();
+        if (!user) return;
+        
         // 更新用户按钮显示
-        userMenuBtn.textContent = currentUser.initials || 'KQ';
-        userMenuBtn.title = `${currentUser.name} (${currentUser.email})`;
+        userMenuBtn.textContent = user.initials || 'U';
+        userMenuBtn.title = `${user.name} (${user.email})`;
         
         // 确保用户相关元素可见
         document.querySelectorAll('.require-auth').forEach(el => {
             el.style.display = '';
         });
+        
+        // 根据用户角色设置权限
+        if (authService.isAdmin()) {
+            // 管理员特有元素
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = '';
+            });
+            
+            // 添加管理员标记
+            userMenuBtn.classList.add('admin-user');
+            
+            // 在用户菜单中添加管理选项
+            const adminEntryExists = Array.from(userMenu.children).some(item => 
+                item.classList.contains('admin-entry'));
+            
+            if (!adminEntryExists) {
+                const adminEntry = document.createElement('div');
+                adminEntry.className = 'menu-item admin-entry';
+                adminEntry.innerHTML = '<i class="fas fa-cog"></i> 管理设置';
+                adminEntry.addEventListener('click', () => {
+                    hideUserMenu();
+                    showAdminPanel();
+                });
+                
+                // 将管理入口添加到菜单的第一项
+                userMenu.insertBefore(adminEntry, userMenu.firstChild);
+            }
+        } else {
+            // 非管理员隐藏管理员特有元素
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 移除管理员标记
+            userMenuBtn.classList.remove('admin-user');
+            
+            // 移除管理入口
+            const adminEntry = userMenu.querySelector('.admin-entry');
+            if (adminEntry) {
+                adminEntry.remove();
+            }
+        }
     } else {
         // 未登录状态
         userMenuBtn.textContent = '登录';
         userMenuBtn.title = '点击登录';
+        userMenuBtn.classList.remove('admin-user');
         
         // 隐藏需要登录才能看到的元素
         document.querySelectorAll('.require-auth').forEach(el => {
             el.style.display = 'none';
         });
+        
+        // 隐藏管理员特有元素
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+}
+
+// 显示管理面板（仅限管理员）
+function showAdminPanel() {
+    if (!authService.isAdmin()) {
+        addMessageToUI('您没有权限访问管理功能', 'ai');
+        return;
+    }
+    
+    // 创建管理面板
+    const adminPanel = document.createElement('div');
+    adminPanel.className = 'admin-panel';
+    adminPanel.innerHTML = `
+        <div class="admin-container">
+            <div class="admin-header">
+                <h2>管理设置</h2>
+                <button class="close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-body">
+                <div class="admin-tabs">
+                    <button class="tab-btn active" data-tab="users">用户管理</button>
+                    <button class="tab-btn" data-tab="settings">系统设置</button>
+                    <button class="tab-btn" data-tab="logs">操作日志</button>
+                </div>
+                <div class="admin-content">
+                    <div class="tab-panel active" id="users-panel">
+                        <h3>用户管理</h3>
+                        <p>这里可以管理系统用户、分配角色等。</p>
+                        <button class="admin-action-btn" id="refresh-users-btn">
+                            <i class="fas fa-sync"></i> 刷新用户列表
+                        </button>
+                        <div class="users-list" id="admin-users-list">
+                            <div class="loading-users">加载用户列表中...</div>
+                        </div>
+                    </div>
+                    <div class="tab-panel" id="settings-panel">
+                        <h3>系统设置</h3>
+                        <p>这里可以管理系统配置、API设置等。</p>
+                        <div class="settings-form">
+                            <div class="input-group">
+                                <label>API基础URL</label>
+                                <input type="text" id="api-base-url" placeholder="例如: https://api.example.com">
+                            </div>
+                            <div class="input-group">
+                                <label>默认模型</label>
+                                <select id="default-model">
+                                    <option value="deepseek/deepseek-r1:free">DeepSeek R1 (免费)</option>
+                                    <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+                                    <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
+                                </select>
+                            </div>
+                            <button class="admin-action-btn" id="save-settings-btn">
+                                <i class="fas fa-save"></i> 保存设置
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tab-panel" id="logs-panel">
+                        <h3>操作日志</h3>
+                        <p>查看系统操作日志</p>
+                        <div class="logs-list">
+                            <div class="log-entry">
+                                <span class="log-time">2024-03-27 12:00:00</span>
+                                <span class="log-user">admin</span>
+                                <span class="log-action">登录系统</span>
+                            </div>
+                            <div class="log-entry">
+                                <span class="log-time">2024-03-27 12:05:10</span>
+                                <span class="log-user">admin</span>
+                                <span class="log-action">修改系统设置</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(adminPanel);
+    
+    // 设置关闭按钮事件
+    const closeBtn = adminPanel.querySelector('.close-btn');
+    closeBtn.addEventListener('click', () => {
+        closeAdminPanel();
+    });
+    
+    // 设置标签切换事件
+    const tabBtns = adminPanel.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 移除所有活动标签
+            tabBtns.forEach(b => b.classList.remove('active'));
+            adminPanel.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            
+            // 激活当前标签
+            btn.classList.add('active');
+            const tabId = btn.dataset.tab + '-panel';
+            adminPanel.querySelector(`#${tabId}`).classList.add('active');
+        });
+    });
+    
+    // 加载用户列表
+    loadAdminUsers(adminPanel);
+    
+    // 设置保存设置事件
+    const saveSettingsBtn = adminPanel.querySelector('#save-settings-btn');
+    saveSettingsBtn.addEventListener('click', () => {
+        saveAdminSettings();
+    });
+    
+    // 添加动画类
+    setTimeout(() => {
+        adminPanel.classList.add('visible');
+    }, 10);
+}
+
+// 关闭管理面板
+function closeAdminPanel() {
+    const adminPanel = document.querySelector('.admin-panel');
+    if (adminPanel) {
+        adminPanel.classList.remove('visible');
+        setTimeout(() => {
+            adminPanel.remove();
+        }, 300);
+    }
+}
+
+// 加载管理用户列表
+async function loadAdminUsers(adminPanel) {
+    try {
+        // 获取用户数据
+        const response = await fetch('users.json');
+        const data = await response.json();
+        
+        if (!data || !data.users) {
+            throw new Error('无法获取用户数据');
+        }
+        
+        const usersList = adminPanel.querySelector('#admin-users-list');
+        usersList.innerHTML = '';
+        
+        // 为每个用户创建列表项
+        data.users.forEach(user => {
+            const userItem = document.createElement('div');
+            userItem.className = 'user-item';
+            
+            // 解密用户名
+            let userName = '未知用户';
+            try {
+                if (user.name_encrypted) {
+                    userName = CryptoJS.AES.decrypt(
+                        user.name_encrypted, 
+                        'Origin-Name-Key-2023'
+                    ).toString(CryptoJS.enc.Utf8);
+                }
+            } catch (e) {
+                console.error('解密用户名失败:', e);
+            }
+            
+            userItem.innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar">${user.initials || 'U'}</div>
+                    <div class="user-details">
+                        <div class="user-name">${userName}</div>
+                        <div class="user-role">${user.role || 'user'}</div>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="user-action-btn" data-action="edit" data-id="${user.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="user-action-btn" data-action="delete" data-id="${user.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            usersList.appendChild(userItem);
+        });
+        
+        // 绑定用户操作按钮事件
+        adminPanel.querySelectorAll('.user-action-btn').forEach(btn => {
+            btn.addEventListener('click', event => {
+                const action = btn.dataset.action;
+                const userId = btn.dataset.id;
+                
+                if (action === 'edit') {
+                    editUser(userId);
+                } else if (action === 'delete') {
+                    deleteUser(userId);
+                }
+            });
+        });
+    } catch (error) {
+        console.error('加载用户列表失败:', error);
+        const usersList = adminPanel.querySelector('#admin-users-list');
+        usersList.innerHTML = `
+            <div class="error-message">
+                加载用户列表失败: ${error.message}
+            </div>
+        `;
     }
 }
 

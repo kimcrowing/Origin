@@ -7,7 +7,8 @@
       "name_encrypted": "U2FsdGVkX1+CkzDArwUMcLfqQz7oD5LG2XL5dKw9U0g=",
       "initials": "GL",
       "avatar": null,
-      "created_at": 1677649200000
+      "created_at": 1677649200000,
+      "role": "user"
     },
     {
       "id": "user_2",
@@ -16,7 +17,8 @@
       "name_encrypted": "U2FsdGVkX18TE+2kg6hdn1NSP7QoVn9XcRht/qz5yLU=",
       "initials": "KC",
       "avatar": null,
-      "created_at": 1711497600000
+      "created_at": 1711497600000,
+      "role": "admin"
     }
   ]
 }

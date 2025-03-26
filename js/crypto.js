@@ -42,13 +42,28 @@ function decryptAES(encrypted, key = ENCRYPTION_KEY) {
  * @returns {string} 加密后的用户令牌
  */
 function generateUserToken(user) {
-    const tokenData = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        timestamp: Date.now()
-    };
-    return encryptAES(JSON.stringify(tokenData));
+    try {
+        // 使用AES加密用户数据
+        const tokenData = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            initials: user.initials,
+            avatar: user.avatar,
+            role: user.role || 'user', // 添加角色信息，默认为普通用户
+            timestamp: Date.now()
+        };
+        
+        const token = CryptoJS.AES.encrypt(
+            JSON.stringify(tokenData),
+            'Origin-Token-Key-2023'
+        ).toString();
+        
+        return token;
+    } catch (error) {
+        console.error('生成用户令牌出错:', error);
+        throw error;
+    }
 }
 
 /**
@@ -58,21 +73,33 @@ function generateUserToken(user) {
  */
 function validateUserToken(token) {
     try {
-        const decrypted = decryptAES(token);
+        const decrypted = CryptoJS.AES.decrypt(
+            token,
+            'Origin-Token-Key-2023'
+        ).toString(CryptoJS.enc.Utf8);
+        
+        if (!decrypted) {
+            return null;
+        }
+        
         const userData = JSON.parse(decrypted);
         
-        // 验证令牌是否过期（例如30天）
-        const now = Date.now();
-        const tokenTime = userData.timestamp;
-        const maxAge = 30 * 24 * 60 * 60 * 1000; // 30天
+        // 检查令牌是否过期（默认7天）
+        const tokenAge = Date.now() - userData.timestamp;
+        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7天
         
-        if (now - tokenTime > maxAge) {
-            return null; // 令牌过期
+        if (tokenAge > maxAge) {
+            return null; // 令牌已过期
+        }
+        
+        // 确保返回的用户数据包含角色信息
+        if (!userData.role) {
+            userData.role = 'user'; // 默认为普通用户
         }
         
         return userData;
     } catch (error) {
-        console.error('令牌验证失败:', error);
+        console.error('验证用户令牌出错:', error);
         return null;
     }
 }
@@ -140,46 +167,45 @@ async function loadUserData() {
  */
 async function authenticateUser(email, password) {
     try {
+        // 获取用户数据
+        const usersData = await loadUserData();
+        
+        if (!usersData || !usersData.users) {
+            return { success: false, message: '无法获取用户数据' };
+        }
+        
+        // 计算邮箱和密码的哈希值
         const emailHash = hashEmail(email);
         const passwordHash = hashPassword(password);
         
-        // 加载用户数据
-        const userData = await loadUserData();
-        
         // 查找匹配的用户
-        const user = userData.users.find(u => 
+        const user = usersData.users.find(u => 
             u.email_hash === emailHash && 
             u.password_hash === passwordHash
         );
         
-        if (user) {
-            // 解密用户名
-            const name = user.name_encrypted ? decryptUserName(user.name_encrypted) : '用户';
-            
-            // 返回用户信息（不包含敏感信息）
-            return {
-                success: true,
-                message: '登录成功',
-                user: {
-                    id: user.id,
-                    name: name,
-                    email: email, // 使用输入的邮箱，而不是存储的哈希值
-                    initials: user.initials,
-                    avatar: user.avatar
-                }
-            };
-        } else {
-            return {
-                success: false,
-                message: '邮箱或密码不正确'
-            };
+        if (!user) {
+            return { success: false, message: '邮箱或密码不正确' };
         }
-    } catch (error) {
-        console.error('用户验证失败:', error);
+        
+        // 解密用户名
+        const decryptedName = decryptAES(user.name_encrypted);
+        
+        // 返回用户信息（不包含密码哈希）
         return {
-            success: false,
-            message: '验证过程出错，请稍后再试'
+            success: true,
+            user: {
+                id: user.id,
+                name: decryptedName,
+                email: email,
+                initials: user.initials,
+                avatar: user.avatar,
+                role: user.role || 'user' // 添加角色信息，默认为普通用户
+            }
         };
+    } catch (error) {
+        console.error('认证过程中出错:', error);
+        return { success: false, message: '认证过程中出现错误' };
     }
 }
 

@@ -1430,4 +1430,281 @@ button:focus {
         background-color: var(--dark-background-color);
         color: var(--dark-text-color);
     }
+}
+
+/* 管理员样式 */
+.admin-user {
+    background-color: var(--accent-blue) !important;
+    color: white !important;
+}
+
+.admin-entry {
+    color: var(--accent-blue);
+    font-weight: 500;
+}
+
+.admin-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.admin-panel.visible {
+    opacity: 1;
+}
+
+.admin-container {
+    width: 800px;
+    max-width: 90%;
+    height: 80%;
+    max-height: 600px;
+    background-color: var(--background-color);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: scaleIn 0.3s ease;
+}
+
+.admin-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-header h2 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.admin-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 20px;
+}
+
+.tab-btn {
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    color: var(--secondary-text);
+    font-size: 14px;
+    cursor: pointer;
+    position: relative;
+    margin-right: 10px;
+}
+
+.tab-btn.active {
+    color: var(--accent-blue);
+    font-weight: 500;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--accent-blue);
+}
+
+.admin-content {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.tab-panel h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.admin-action-btn {
+    background-color: var(--accent-blue);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 16px 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.admin-action-btn i {
+    margin-right: 6px;
+}
+
+.users-list {
+    margin-top: 16px;
+}
+
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.user-item:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: rgba(128, 128, 128, 0.2);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    margin-right: 12px;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.user-role {
+    font-size: 12px;
+    color: var(--secondary-text);
+}
+
+.user-role[data-role="admin"] {
+    color: var(--accent-blue);
+    font-weight: 500;
+}
+
+.user-actions {
+    display: flex;
+}
+
+.user-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    margin-left: 6px;
+    color: var(--secondary-text);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.user-action-btn:hover {
+    background-color: rgba(128, 128, 128, 0.2);
+    color: var(--text-color);
+}
+
+.user-action-btn[data-action="delete"]:hover {
+    color: #ff4d4f;
+}
+
+.settings-form {
+    max-width: 400px;
+}
+
+.logs-list {
+    margin-top: 16px;
+}
+
+.log-entry {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    display: flex;
+}
+
+.log-time {
+    color: var(--secondary-text);
+    margin-right: 12px;
+    width: 150px;
+}
+
+.log-user {
+    font-weight: 500;
+    width: 80px;
+    margin-right: 12px;
+}
+
+.loading-users {
+    text-align: center;
+    padding: 20px;
+    color: var(--secondary-text);
+}
+
+.error-message {
+    padding: 12px;
+    color: #ff4d4f;
+    background-color: rgba(255, 77, 79, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        width: 95%;
+        height: 90%;
+    }
+    
+    .admin-tabs {
+        overflow-x: auto;
+        padding: 0 10px;
+    }
+    
+    .admin-content {
+        padding: 15px;
+    }
 } 
