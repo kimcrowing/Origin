@@ -13,28 +13,11 @@ class ApiService {
      * 初始化API服务
      */
     async init() {
-        console.log('初始化API服务...');
-        
         try {
-            // 加载配置文件
-            const response = await fetch('/config.json');
-            
-            if (!response.ok) {
-                throw new Error(`无法加载配置文件: ${response.status} ${response.statusText}`);
-            }
-            
-            // 解析配置数据
-            const configData = await response.json();
-            console.log('已加载配置:', configData);
-            
-            // 设置API配置
-            this.config = configData.api;
+            // 加载API配置
+            this.config = await loadApiConfig();
             this.isConfigLoaded = true;
-            
-            // 尝试从已解密的密钥或keyService获取API密钥
-            this.config.apiKey = await this.getApiKey();
-            
-            console.log('API服务初始化完成');
+            console.log('API配置已成功加载');
         } catch (error) {
             console.error('API服务初始化失败:', error);
             this.isConfigLoaded = false;
@@ -42,178 +25,135 @@ class ApiService {
     }
 
     /**
-     * 构建API请求数据
-     * @param {string} message 用户消息
-     * @param {string} mode 模式（chat、deep、think）
-     * @returns {Object} 请求数据对象
+     * 获取当前选择的模型
+     * @returns {string} 当前模型ID
      */
-    buildRequestData(message, mode = 'chat') {
-        // 根据模式选择适当的模型
-        let model = this.config?.defaultModel;
-        
-        if (mode === 'deep') {
-            model = this.config?.deepSearchModel || model;
-        } else if (mode === 'think') {
-            model = this.config?.thinkingModel || model;
+    getCurrentModelId() {
+        // 检查全局getCurrentModel函数是否存在
+        if (typeof window.getCurrentModel === 'function') {
+            return window.getCurrentModel();
         }
-        
-        // 构建消息数组
-        const messages = [
-            {
-                role: "user",
-                content: message
-            }
-        ];
-        
-        // 返回请求数据
-        return {
-            model: model,
-            messages: messages,
-            temperature: 0.7,
-            max_tokens: 2000
-        };
+        // 否则使用配置中的默认模型
+        return this.config?.defaultModel || 'deepseek/deepseek-r1-zero:free';
     }
 
     /**
-     * 执行聊天补全API调用
-     * @param {Object} requestData 请求数据
+     * 调用AI聊天API
+     * @param {string} userMessage 用户消息
+     * @param {string} model 使用的模型，不指定则使用默认模型
+     * @param {boolean} stream 是否流式响应
      * @returns {Promise<Object>} API响应结果
      */
-    async chatCompletion(requestData) {
-        console.log('API请求数据:', requestData);
-        
+    async chatCompletion(userMessage, model = null, stream = false) {
+        if (!this.isConfigLoaded || !this.config) {
+            await this.init();
+            if (!this.isConfigLoaded) {
+                throw new Error('API配置未加载，无法调用API');
+            }
+        }
+
         try {
-            // 发送API请求
-            const response = await fetch(`${this.config.apiBaseUrl}/v1/chat/completions`, {
+            // 准备请求参数
+            const requestBody = {
+                model: model || this.getCurrentModelId(),
+                messages: [{ role: 'user', content: userMessage }],
+                stream: stream
+            };
+
+            // 调用API
+            const response = await fetch(this.config.url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.config.apiKey}`
+                    'Authorization': `Bearer ${this.config.getKey()}`,
+                    'HTTP-Referer': this.config.referer,
+                    'X-Title': this.config.title
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify(requestBody)
             });
-            
-            // 检查响应状态
+
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API响应错误:', response.status, errorText);
-                throw new Error(`API响应错误: ${response.status} ${errorText}`);
+                const errorData = await response.json().catch(() => null);
+                throw new Error(`API请求失败: ${response.status} ${errorData ? JSON.stringify(errorData) : ''}`);
             }
-            
-            // 解析JSON响应
-            const data = await response.json();
-            console.log('API响应数据:', data);
-            
-            return data;
+
+            if (stream) {
+                return response; // 返回原始响应以便后续处理流
+            } else {
+                return await response.json();
+            }
         } catch (error) {
-            console.error('API调用出错:', error);
+            console.error('API调用失败:', error);
             throw error;
         }
     }
 
     /**
-     * 执行流式聊天补全
-     * @param {Object} requestData 请求数据
-     * @param {Function} onChunk 处理数据块的回调
-     * @param {Function} onComplete 完成时的回调
-     * @param {Function} onError 错误处理回调
+     * 调用AI聊天API（流式响应）
+     * @param {string} userMessage 用户消息
+     * @param {function} onChunk 处理每个响应片段的回调
+     * @param {function} onComplete 处理完成的回调
+     * @param {function} onError 处理错误的回调
      */
-    async streamCompletion(requestData, onChunk, onComplete, onError) {
+    async streamChatCompletion(userMessage, onChunk, onComplete, onError) {
         try {
-            // 发送API请求
-            const response = await fetch(`${this.config.apiBaseUrl}/v1/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.config.apiKey}`
-                },
-                body: JSON.stringify(requestData)
-            });
+            const response = await this.chatCompletion(userMessage, null, true);
             
-            // 检查响应状态
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API流式响应错误:', response.status, errorText);
-                throw new Error(`API响应错误: ${response.status} ${errorText}`);
-            }
-            
-            // 获取响应的可读流
+            // 处理流式响应
             const reader = response.body.getReader();
-            const decoder = new TextDecoder();
+            const decoder = new TextDecoder('utf-8');
             let buffer = '';
             
-            // 读取数据流
+            // 开始读取流
             while (true) {
                 const { done, value } = await reader.read();
-                
-                if (done) {
-                    break;
-                }
-                
-                // 解码数据并添加到缓冲区
+                if (done) break;
+
+                // 解码数据
                 buffer += decoder.decode(value, { stream: true });
                 
-                // 处理缓冲区中的所有完整数据行
+                // 处理数据行
                 const lines = buffer.split('\n');
-                buffer = lines.pop();  // 保留最后一个不完整的行
+                buffer = lines.pop(); // 最后一行可能不完整，留到下一次
                 
-                // 处理每一行数据
                 for (const line of lines) {
-                    // 跳过空行
-                    if (!line.trim()) continue;
-                    
-                    // 跳过以冒号开头的特殊行（如:keepalive）
-                    if (line.startsWith(':')) continue;
-                    
-                    // 移除data:前缀并解析JSON
-                    const jsonData = line.replace(/^data: /, '').trim();
-                    
-                    // 处理数据流结束标记
-                    if (jsonData === '[DONE]') {
-                        continue;
-                    }
-                    
-                    try {
-                        // 解析JSON数据
-                        const parsedData = JSON.parse(jsonData);
+                    if (line.trim() === '') continue;
+                    if (line.startsWith('data: ')) {
+                        const jsonStr = line.slice(6);
+                        if (jsonStr === '[DONE]') {
+                            onComplete && onComplete();
+                            continue;
+                        }
                         
-                        // 调用回调处理数据块
-                        if (onChunk) {
-                            onChunk(parsedData);
+                        try {
+                            const data = JSON.parse(jsonStr);
+                            onChunk && onChunk(data);
+                        } catch (e) {
+                            console.warn('无法解析流式响应:', jsonStr);
                         }
-                    } catch (e) {
-                        console.error('解析流数据出错:', e, jsonData);
                     }
                 }
             }
             
-            // 处理最后的数据片段
-            if (buffer.trim()) {
-                try {
-                    const jsonData = buffer.replace(/^data: /, '').trim();
-                    if (jsonData !== '[DONE]') {
-                        const parsedData = JSON.parse(jsonData);
-                        if (onChunk) {
-                            onChunk(parsedData);
+            // 处理剩余数据
+            if (buffer.trim() !== '') {
+                if (buffer.startsWith('data: ')) {
+                    const jsonStr = buffer.slice(6);
+                    if (jsonStr !== '[DONE]') {
+                        try {
+                            const data = JSON.parse(jsonStr);
+                            onChunk && onChunk(data);
+                        } catch (e) {
+                            console.warn('无法解析最后的流式响应:', jsonStr);
                         }
                     }
-                } catch (e) {
-                    console.error('解析最后的流数据出错:', e, buffer);
                 }
             }
             
-            // 调用完成回调
-            if (onComplete) {
-                onComplete();
-            }
+            onComplete && onComplete();
         } catch (error) {
-            // 调用错误回调
-            if (onError) {
-                onError(error);
-            } else {
-                console.error('流式补全出错:', error);
-                throw error;
-            }
+            console.error('流式API调用失败:', error);
+            onError && onError(error);
         }
     }
 
@@ -223,85 +163,18 @@ class ApiService {
      * @param {string} mode 聊天模式（普通、深度或思考）
      * @returns {Promise<Object>} API响应结果
      */
-    async getChatCompletion(userMessage, mode = 'chat', model = null) {
-        // 构建API请求数据
-        const requestData = this.buildRequestData(userMessage, mode);
+    async getChatCompletion(userMessage, mode) {
+        // 根据模式选择适当的模型
+        let model = this.getCurrentModelId();
         
-        // 如果提供了特定模型，使用提供的模型
-        if (model) {
-            requestData.model = model;
+        if (mode === 'deep') {
+            model = this.config?.deepSearchModel || model;
+        } else if (mode === 'think') {
+            model = this.config?.thinkingModel || model;
         }
         
-        // 调用API获取响应
-        return await this.chatCompletion(requestData);
-    }
-
-    // 流式聊天补全
-    async streamChatCompletion(message, onChunk, onComplete, onError, model = null) {
-        // 构建API请求数据
-        const requestData = this.buildRequestData(message, 'chat');
-        
-        // 开启流式响应
-        requestData.stream = true;
-        
-        // 如果提供了特定模型，使用提供的模型
-        if (model) {
-            requestData.model = model;
-        }
-        
-        // 调用流式API
-        try {
-            await this.streamCompletion(requestData, onChunk, onComplete, onError);
-        } catch (error) {
-            if (onError) {
-                onError(error);
-            } else {
-                console.error('流式补全出错:', error);
-            }
-        }
-    }
-
-    /**
-     * 获取API密钥
-     * @returns {Promise<string>} API密钥
-     */
-    async getApiKey() {
-        // 检查配置是否已加载
-        if (!this.config) {
-            throw new Error('配置未加载，无法获取API密钥');
-        }
-        
-        try {
-            // 如果存在加密的密钥，则使用它
-            if (this.config.key_encrypted) {
-                return CryptoJS.AES.decrypt(
-                    this.config.key_encrypted,
-                    authService.getAuthToken() || 'default-key'
-                ).toString(CryptoJS.enc.Utf8);
-            }
-            
-            // 如果存在密钥段，则组合它们
-            if (this.config.key_segments) {
-                const segments = Object.values(this.config.key_segments);
-                let combinedKey = '';
-                
-                for (const segment of segments) {
-                    const decryptedSegment = CryptoJS.AES.decrypt(
-                        segment,
-                        authService.getAuthToken() || 'default-key'
-                    ).toString(CryptoJS.enc.Utf8);
-                    
-                    combinedKey += decryptedSegment;
-                }
-                
-                return combinedKey;
-            }
-            
-            throw new Error('配置中没有找到API密钥');
-        } catch (error) {
-            console.error('获取API密钥失败:', error);
-            throw error;
-        }
+        // 调用基础方法
+        return this.chatCompletion(userMessage, model, false);
     }
 }
 

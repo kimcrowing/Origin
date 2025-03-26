@@ -16,8 +16,6 @@ const newChatBtn = document.querySelector('.fa-edit').closest('.header-btn');
 const deepSearchToggle = document.getElementById('deep-search-toggle') || { checked: false };
 const streamToggle = document.getElementById('stream-toggle') || { checked: true };
 const thinkToggle = document.getElementById('think-toggle') || { checked: false };
-const modelSelector = document.getElementById('model-selector');
-const currentModelText = document.getElementById('current-model');
 
 // 用户登录状态管理
 let currentUser = null;
@@ -35,9 +33,6 @@ let currentFile = null;
 let sessions = [];
 let currentSessionId = null;
 
-// 当前选择的模型
-let currentModel = 'deepseek/deepseek-r1-zero:free';
-
 // 初始化函数
 function init() {
     // 检查用户登录状态
@@ -47,13 +42,13 @@ function init() {
     updateUserMenuButton();
     updateUserUI();
     
-    // 初始化模型选择器
-    initModelSelector();
-    
     // 设置提交按钮点击事件
     submitBtn.addEventListener('click', function(e) {
         handleSubmit(e);
     });
+    
+    // 初始化模型选择器
+    initModelSelector();
     
     // 设置输入框按键事件（Enter键发送）
     chatInput.addEventListener('keydown', function(e) {
@@ -948,7 +943,7 @@ function handleSubmit(event) {
         mode = 'think';
     }
     
-    console.log('当前模式:', mode, '流式响应:', isStreamingMode, '使用模型:', currentModel);
+    console.log('当前模式:', mode, '流式响应:', isStreamingMode);
     
     // 根据模式确定使用流式响应还是普通响应
     if (isStreamingMode) {
@@ -1009,45 +1004,87 @@ async function streamAIResponse(userMessage, mode) {
                     // 更新消息内容
                     messageContent.innerHTML = formatMessage(fullResponse);
                     
-                    // 重新添加复制按钮（因为innerHTML会替换所有内容）
-                    messageContent.appendChild(copyBtn);
+                    // 确保复制按钮存在
+                    if (!messageContent.querySelector('.copy-btn')) {
+                        messageContent.appendChild(copyBtn);
+                    }
                     
                     // 滚动到底部
                     scrollToBottom();
                 }
             },
-            // 处理完成
+            // 流式响应完成的回调
             () => {
-                // 处理完成后的操作
-                console.log('流式响应完成');
+                console.log('流式响应完成，消息ID:', messageId);
                 
-                // 保存消息到聊天历史
-                chatHistory.push({
-                    role: 'ai',
-                    content: fullResponse,
-                    time: getCurrentTime()
-                });
-                
-                // 保存当前会话
-                saveCurrentSession();
+                // 确保历史记录中不重复添加相同的消息
+                const existingMessage = chatHistory.find(msg => msg.id === messageId);
+                if (!existingMessage) {
+                    // 添加消息到历史记录
+                    chatHistory.push({
+                        id: messageId,
+                        sender: 'ai',
+                        content: fullResponse,
+                        timestamp: Date.now()
+                    });
+                    
+                    // 保存当前会话
+                    saveCurrentSession();
+                }
             },
-            // 处理错误
+            // 错误处理
             (error) => {
                 console.error('流式响应出错:', error);
-                messageContent.innerHTML += `<div class="error-message">出错了：${error.message}</div>`;
                 
-                // 重新添加复制按钮
-                messageContent.appendChild(copyBtn);
-            },
-            // 使用选中的模型
-            currentModel
+                // 添加错误消息
+                messageContent.innerHTML += `<p class="error-message">错误: ${error.message}</p>`;
+                
+                // 确保复制按钮存在
+                if (!messageContent.querySelector('.copy-btn')) {
+                    messageContent.appendChild(copyBtn);
+                }
+                
+                // 确保历史记录中不重复添加相同的消息
+                const existingMessage = chatHistory.find(msg => msg.id === messageId);
+                if (!existingMessage) {
+                    // 添加消息到历史记录
+                    chatHistory.push({
+                        id: messageId,
+                        sender: 'ai',
+                        content: messageContent.innerHTML,
+                        timestamp: Date.now()
+                    });
+                    
+                    // 保存当前会话
+                    saveCurrentSession();
+                }
+            }
         );
     } catch (error) {
-        console.error('处理流式响应时发生错误:', error);
-        messageContent.innerHTML = `<div class="error-message">服务暂时不可用，请稍后再试</div>`;
+        console.error('处理流式响应时出错:', error);
         
-        // 重新添加复制按钮
-        messageContent.appendChild(copyBtn);
+        // 添加错误消息
+        messageContent.innerHTML += `<p class="error-message">抱歉，处理响应时出现问题: ${error.message}</p>`;
+        
+        // 确保复制按钮存在
+        if (!messageContent.querySelector('.copy-btn')) {
+            messageContent.appendChild(copyBtn);
+        }
+        
+        // 确保历史记录中不重复添加相同的消息
+        const existingMessage = chatHistory.find(msg => msg.id === messageId);
+        if (!existingMessage) {
+            // 添加消息到历史记录
+            chatHistory.push({
+                id: messageId,
+                sender: 'ai',
+                content: messageContent.innerHTML,
+                timestamp: Date.now()
+            });
+            
+            // 保存当前会话
+            saveCurrentSession();
+        }
     }
 }
 
@@ -1213,43 +1250,39 @@ function getCurrentTime() {
 }
 
 // 生成AI响应
-async function generateAIResponse(userMessage, mode = 'chat') {
+async function generateAIResponse(userMessage, mode) {
     try {
-        // 显示加载状态
-        showThinkingIndicator();
+        const response = await apiService.getChatCompletion(userMessage, mode);
         
-        // 获取AI响应
-        const response = await apiService.getChatCompletion(userMessage, mode, currentModel);
-        
-        // 移除加载状态
+        // 移除思考指示器
         removeThinkingIndicator();
         
-        // 获取AI回复内容
-        const aiResponse = response.choices[0].message.content;
+        // 使用消息添加函数添加AI响应
+        if (response && response.choices && response.choices.length > 0) {
+            const aiMessage = response.choices[0].message.content;
+            addMessageToUI(aiMessage, 'ai');
+            
+            // 保存当前会话
+            saveCurrentSession();
+        } else {
+            console.error('无效的API响应:', response);
+            addMessageToUI('抱歉，我无法生成响应。请稍后再试。', 'ai');
+        }
+    } catch (error) {
+        console.error('生成AI响应时出错:', error);
         
-        // 添加AI消息到UI
-        addMessageToUI(aiResponse, 'ai');
+        // 移除思考指示器
+        removeThinkingIndicator();
         
-        // 保存消息到聊天历史
-        chatHistory.push({
-            role: 'ai',
-            content: aiResponse,
-            time: getCurrentTime()
-        });
+        // 添加错误消息
+        addMessageToUI(`抱歉，生成响应时出错: ${error.message}`, 'ai');
         
         // 保存当前会话
         saveCurrentSession();
-        
-    } catch (error) {
-        // 移除加载状态
-        removeThinkingIndicator();
-        
-        // 处理错误
-        console.error('生成AI响应时出错:', error);
-        
-        // 添加错误消息到UI
-        addMessageToUI('抱歉，生成回复时出现错误: ' + error.message, 'error');
     }
+    
+    // 滚动到底部
+    scrollToBottom();
 }
 
 // 提取关键词
@@ -2684,67 +2717,77 @@ function removeThinkingIndicator() {
 
 // 初始化模型选择器
 function initModelSelector() {
-    if (!modelSelector) return;
+    const modelSelector = document.querySelector('.model-selector');
+    const currentModelSpan = document.getElementById('current-model');
+    const modelOptions = document.querySelectorAll('.model-option');
+    const defaultModel = 'deepseek/deepseek-r1-zero:free'; // 默认模型
     
-    // 获取模型选项
-    const modelOptions = modelSelector.querySelectorAll('.model-option');
+    // 从localStorage获取保存的模型选择
+    let selectedModel = localStorage.getItem('selectedModel') || defaultModel;
     
-    // 设置默认选中的模型
-    updateSelectedModel(currentModel);
-    
-    // 添加点击事件
-    modelOptions.forEach(option => {
-        option.addEventListener('click', function(e) {
-            e.stopPropagation(); // 阻止事件冒泡
-            
-            // 获取选中的模型
-            const selectedModel = this.getAttribute('data-model');
-            
-            // 更新当前模型
-            currentModel = selectedModel;
-            
-            // 更新UI
-            updateSelectedModel(selectedModel);
-            
-            // 关闭下拉菜单
-            if (modelSelector.querySelector('.model-dropdown')) {
-                modelSelector.querySelector('.model-dropdown').classList.remove('active');
+    // 更新当前显示的模型名称和样式
+    function updateModelDisplay() {
+        // 更新当前选中的模型标签
+        modelOptions.forEach(option => {
+            const model = option.getAttribute('data-model');
+            if (model === selectedModel) {
+                option.classList.add('selected');
+                currentModelSpan.textContent = option.textContent;
+            } else {
+                option.classList.remove('selected');
             }
-            
-            console.log('已选择模型:', selectedModel);
         });
-    });
-    
-    // 点击模型选择器显示下拉菜单
-    modelSelector.addEventListener('click', function(e) {
-        const dropdown = this.querySelector('.model-dropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('active');
+        
+        // 如果没有找到匹配的模型，使用默认显示
+        if (!currentModelSpan.textContent || currentModelSpan.textContent === 'Origin AI') {
+            modelOptions.forEach(option => {
+                if (option.getAttribute('data-model') === defaultModel) {
+                    currentModelSpan.textContent = option.textContent;
+                }
+            });
         }
+    }
+    
+    // 初始化时更新显示
+    updateModelDisplay();
+    
+    // 点击模型选择器显示/隐藏下拉菜单
+    modelSelector.addEventListener('click', function(e) {
+        e.stopPropagation();
+        modelSelector.classList.toggle('active');
     });
     
-    // 点击页面其他位置关闭下拉菜单
+    // 点击页面其他地方关闭下拉菜单
     document.addEventListener('click', function(e) {
         if (!modelSelector.contains(e.target)) {
-            const dropdown = modelSelector.querySelector('.model-dropdown');
-            if (dropdown) {
-                dropdown.classList.remove('active');
-            }
+            modelSelector.classList.remove('active');
         }
+    });
+    
+    // 点击模型选项
+    modelOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            // 获取选择的模型
+            selectedModel = this.getAttribute('data-model');
+            
+            // 保存到localStorage
+            localStorage.setItem('selectedModel', selectedModel);
+            
+            // 更新模型显示
+            updateModelDisplay();
+            
+            // 关闭下拉菜单
+            modelSelector.classList.remove('active');
+        });
     });
 }
 
-// 更新选中的模型UI
-function updateSelectedModel(modelId) {
-    // 更新当前选中的模型文本
-    const modelOptions = modelSelector.querySelectorAll('.model-option');
-    
-    modelOptions.forEach(option => {
-        const isSelected = option.getAttribute('data-model') === modelId;
-        option.setAttribute('data-selected', isSelected);
-        
-        if (isSelected) {
-            currentModelText.textContent = option.querySelector('span').textContent;
-        }
-    });
-} 
+// 获取当前选择的模型
+function getCurrentModel() {
+    return localStorage.getItem('selectedModel') || 'deepseek/deepseek-r1-zero:free';
+}
+
+// 将函数暴露给window对象
+window.getCurrentModel = getCurrentModel;
