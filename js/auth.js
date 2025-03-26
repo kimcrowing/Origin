@@ -6,6 +6,21 @@ class AuthService {
     this.userKey = 'origin_current_user';  // 用户信息存储键名
     this.checkBackendStatus();
     
+    // 确保从authService初始化currentUser
+    if (this.isLoggedIn) {
+      const user = this.getCurrentUser();
+      if (user) {
+        window.currentUser = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          initials: getInitials(user.name),
+          avatar: user.avatar,
+          rememberMe: true
+        };
+      }
+    }
+    
     // 每30秒检查一次后端状态
     setInterval(() => this.checkBackendStatus(), 30000);
   }

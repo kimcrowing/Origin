@@ -38,6 +38,10 @@ function init() {
     // 检查用户登录状态
     checkUserLoginStatus();
     
+    // 更新用户界面
+    updateUserMenuButton();
+    updateUserUI();
+    
     // 设置提交按钮点击事件
     submitBtn.addEventListener('click', function(e) {
         handleSubmit(e);
@@ -792,8 +796,8 @@ function initUserMenu() {
 
 // 更新用户菜单按钮显示
 function updateUserMenuButton() {
-    if (authService && authService.isLoggedIn) {
-        const user = authService.getCurrentUser();
+    if ((authService && authService.isLoggedIn) || currentUser) {
+        const user = currentUser || authService.getCurrentUser();
         if (user) {
             userMenuBtn.textContent = user.initials || 'U';
             userMenuBtn.title = `${user.name} (${user.email})`;
@@ -1543,8 +1547,8 @@ function checkUserLoginStatus() {
 
 // 更新用户界面
 function updateUserUI() {
-    if (authService.isLoggedIn) {
-        const user = authService.getCurrentUser();
+    if (authService.isLoggedIn || currentUser) {
+        const user = currentUser || authService.getCurrentUser();
         if (!user) return;
         
         // 更新用户按钮显示
