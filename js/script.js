@@ -645,6 +645,12 @@ function autoResizeTextarea() {
     chatInput.style.height = newHeight + 'px';
 }
 
+// 重置输入框高度到初始状态
+function resetTextareaHeight() {
+    // 设置回最小高度 44px
+    chatInput.style.height = '44px';
+}
+
 // 添加按钮悬停效果
 function addButtonHoverEffects() {
     const buttons = document.querySelectorAll('.search-btn, .think-btn, .model-selector, .submit-btn');
@@ -896,6 +902,8 @@ function handleSubmit(event) {
         if (handleSpecialCommand(userMessage)) {
             // 如果是已知命令，清空输入并返回
             chatInput.value = '';
+            // 重置输入框高度
+            resetTextareaHeight();
             return;
         }
     }
@@ -905,6 +913,9 @@ function handleSubmit(event) {
     
     // 清空输入框
     chatInput.value = '';
+    
+    // 重置输入框高度
+    resetTextareaHeight();
     
     // 显示思考动画
     showThinkingIndicator();
@@ -1361,6 +1372,10 @@ function generateRandomParagraphs(count, keywords) {
 function clearChatHistory() {
     chatHistory = [];
     messagesContainer.innerHTML = '';
+    
+    // 清空输入框并重置高度
+    chatInput.value = '';
+    resetTextareaHeight();
     
     // 如果有当前会话，将其消息清空
     if (currentSessionId) {
