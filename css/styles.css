@@ -687,12 +687,10 @@ button:focus {
     position: absolute;
     bottom: 100%;
     left: 0;
-    background-color: var(--background-color);
+    background-color: var(--bg-color);
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: max-content;
-    min-width: 140px;
-    max-width: 200px;
+    width: 170px;
     z-index: 100;
     overflow: hidden;
     display: none;
@@ -705,7 +703,7 @@ button:focus {
 }
 
 .model-dropdown-item {
-    padding: 8px 12px;
+    padding: 10px 12px;
     cursor: pointer;
     transition: background-color 0.2s ease;
     display: flex;
