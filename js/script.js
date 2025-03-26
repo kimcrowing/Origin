@@ -1864,14 +1864,7 @@ function showLoginModal() {
                 <div class="login-divider">
                     <span>或者</span>
                 </div>
-                <div class="social-login">
-                    <button class="social-btn google-btn">
-                        <i class="fab fa-google"></i> Google登录
-                    </button>
-                    <button class="social-btn github-btn">
-                        <i class="fab fa-github"></i> GitHub登录
-                    </button>
-                </div>
+                <!-- 社交登录按钮已移除 -->
                 <p class="signup-link">还没有账号? <a href="#">注册</a></p>
             </div>
         </div>
@@ -1912,17 +1905,7 @@ function showLoginModal() {
         }
     });
     
-    // 社交登录按钮事件
-    const googleBtn = modal.querySelector('.google-btn');
-    const githubBtn = modal.querySelector('.github-btn');
-    
-    googleBtn.addEventListener('click', () => {
-        handleSocialLogin('google');
-    });
-    
-    githubBtn.addEventListener('click', () => {
-        handleSocialLogin('github');
-    });
+    // 社交登录按钮事件已移除
     
     // 注册链接事件
     const signupLink = modal.querySelector('.signup-link a');
@@ -2152,14 +2135,7 @@ function showSignupModal() {
                 <div class="login-divider">
                     <span>或者</span>
                 </div>
-                <div class="social-login">
-                    <button class="social-btn google-btn">
-                        <i class="fab fa-google"></i> Google注册
-                    </button>
-                    <button class="social-btn github-btn">
-                        <i class="fab fa-github"></i> GitHub注册
-                    </button>
-                </div>
+                <!-- 社交登录按钮已移除 -->
                 <p class="signup-link">已有账号? <a href="#">登录</a></p>
             </div>
         </div>
@@ -2190,17 +2166,7 @@ function showSignupModal() {
         handleSignup();
     });
     
-    // 社交注册按钮事件
-    const googleBtn = modal.querySelector('.google-btn');
-    const githubBtn = modal.querySelector('.github-btn');
-    
-    googleBtn.addEventListener('click', () => {
-        handleSocialLogin('google');
-    });
-    
-    githubBtn.addEventListener('click', () => {
-        handleSocialLogin('github');
-    });
+    // 社交注册按钮事件已移除
     
     // 返回登录事件
     const loginLink = modal.querySelector('.signup-link a');
