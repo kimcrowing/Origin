@@ -667,9 +667,6 @@ button:focus {
     background-color: transparent;
     transition: background-color 0.2s ease, color 0.2s ease;
     position: relative;
-    white-space: nowrap;
-    max-width: 180px;
-    overflow: hidden;
 }
 
 .model-selector:hover {
@@ -679,8 +676,6 @@ button:focus {
 
 .model-selector span {
     margin-right: 4px;
-    text-overflow: ellipsis;
-    overflow: hidden;
 }
 
 .model-selector i {
@@ -692,12 +687,12 @@ button:focus {
     position: absolute;
     bottom: 100%;
     left: 0;
-    background-color: var(--menu-bg);
+    background-color: var(--background-color);
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: auto;
-    min-width: 160px;
-    max-width: 250px;
+    width: max-content;
+    min-width: 140px;
+    max-width: 200px;
     z-index: 100;
     overflow: hidden;
     display: none;
@@ -715,8 +710,6 @@ button:focus {
     transition: background-color 0.2s ease;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    white-space: nowrap;
 }
 
 .model-dropdown-item:hover {
@@ -730,7 +723,6 @@ button:focus {
 
 .model-dropdown-item .model-name {
     font-weight: 500;
-    padding-right: 8px;
 }
 
 /* 不再需要的样式，进行注释
