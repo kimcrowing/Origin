@@ -35,7 +35,23 @@ let sessions = [];
 let currentSessionId = null;
 
 // 当前所选模型
-let currentModel = 'deepseek/deepseek-r1-zero:free';
+let currentModel = 'deepseek/deepseek-r1:free';
+
+// 专利答审提示词
+const PATENT_RESPONSE_PROMPT = `你是一位专业的专利代理人，请根据审查意见通知书的内容，帮助申请人准备专利答复意见。请按照以下步骤进行：
+
+1. 仔细分析审查意见通知书中的每个审查意见
+2. 针对每个审查意见，提供详细的答复策略
+3. 准备修改建议和修改后的权利要求书
+4. 提供完整的答复意见书
+
+请确保答复意见：
+- 符合专利法及实施细则的规定
+- 逻辑清晰，论述充分
+- 引用相关法条和审查指南
+- 提供具体的修改建议
+
+请开始分析审查意见通知书并提供答复意见。`;
 
 // 初始化函数
 function init() {
@@ -2523,95 +2539,92 @@ function formatFileSize(size) {
 }
 
 // 处理上传文件
-function processFile(file) {
-    const fileType = file.type || getFileTypeFromName(file.name);
+async function processFile(file) {
+    const fileType = getFileTypeFromName(file.name);
+    let content = '';
     
-    // 根据文件类型处理
-    if (fileType.startsWith('image/')) {
-        // 处理图片
-        processImage(file);
-    } else if (fileType === 'application/pdf') {
-        // 处理PDF
-        processPDF(file);
-    } else if (fileType.includes('word') || fileType.includes('text/plain')) {
-        // 处理文档
-        processDocument(file);
-    } else {
-        // 处理其他类型文件
-        addMessageToUI(`已收到文件: ${file.name}。目前还不支持处理此类型的文件。`, 'ai');
-        removeThinkingIndicator();
-    }
-}
-
-// 处理图片文件
-function processImage(file) {
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const imageDataUrl = e.target.result;
-        
-        // 创建图片消息
-        const message = `<div class="uploaded-image-container">
-            <img src="${imageDataUrl}" alt="上传的图片" class="uploaded-image">
-            <p>已上传图片: ${file.name}</p>
-        </div>
-        <p>我可以帮您分析这张图片的内容，请告诉我您想了解什么？</p>`;
-        
-        // 移除思考指示器
-        removeThinkingIndicator();
-        
-        // 添加AI响应
-        addMessageToUI(message, 'ai');
-    };
-    
-    reader.onerror = function() {
-        removeThinkingIndicator();
-        addMessageToUI(`抱歉，读取图片时出错。请尝试另一张图片。`, 'ai');
-    };
-    
-    // 开始读取图片
-    reader.readAsDataURL(file);
-}
-
-// 处理PDF文件（简单实现）
-function processPDF(file) {
-    removeThinkingIndicator();
-    addMessageToUI(`我收到了您的PDF文件: ${file.name}。目前，我只能帮您提取基本信息。如果您有特定问题，请告诉我。`, 'ai');
-}
-
-// 处理文档文件（简单实现）
-function processDocument(file) {
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        // 移除思考指示器
-        removeThinkingIndicator();
-        
-        // 对于纯文本文件，可以直接读取内容
-        if (file.type === 'text/plain') {
-            const content = e.target.result;
-            // 显示文件预览（限制长度）
-            const preview = content.length > 500 ? content.substring(0, 500) + '...' : content;
-            addMessageToUI(`已读取文本文件: ${file.name}\n\n预览内容:\n${preview}\n\n请问您想了解这个文档的什么信息？`, 'ai');
-        } else {
-            // 其他文档类型
-            addMessageToUI(`我收到了您的文档: ${file.name}。请告诉我您想了解这个文档的什么内容？`, 'ai');
+    try {
+        switch (fileType) {
+            case 'pdf':
+                content = await processPDF(file);
+                break;
+            case 'doc':
+            case 'docx':
+                content = await processDocument(file);
+                break;
+            case 'txt':
+                content = await file.text();
+                break;
+            default:
+                throw new Error('不支持的文件类型');
         }
-    };
-    
-    reader.onerror = function() {
-        removeThinkingIndicator();
-        addMessageToUI(`抱歉，读取文档时出错。请尝试另一个文件。`, 'ai');
-    };
-    
-    // 如果是文本文件则读取内容
-    if (file.type === 'text/plain') {
-        reader.readAsText(file);
-    } else {
-        // 对于其他文档类型，仅获取基本信息
-        removeThinkingIndicator();
-        addMessageToUI(`我收到了您的文档: ${file.name}。请告诉我您想了解这个文档的什么内容？`, 'ai');
+
+        // 检查是否包含专利相关关键词
+        const keywords = ['审查意见通知书', '审查员', '专利', '权利要求'];
+        const hasPatentKeywords = keywords.some(keyword => content.includes(keyword));
+        
+        if (hasPatentKeywords) {
+            // 添加系统提示消息
+            addMessageToUI('检测到专利相关文件，已加载专利答审模式。', 'system');
+            
+            // 将文件内容和提示词一起发送给AI
+            const prompt = `${PATENT_RESPONSE_PROMPT}\n\n审查意见通知书内容：\n${content}`;
+            await streamAIResponse(prompt, 'search', currentModel);
+        } else {
+            // 普通文件处理
+            addMessageToUI(`已上传文件：${file.name}`, 'system');
+            await streamAIResponse(`请分析以下文件内容：\n${content}`, 'search', currentModel);
+        }
+    } catch (error) {
+        console.error('文件处理错误:', error);
+        addMessageToUI(`文件处理失败：${error.message}`, 'system');
     }
+}
+
+// 处理PDF文件
+async function processPDF(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+                
+                // 提取所有页面的文本
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+                
+                resolve(fullText);
+            } catch (error) {
+                reject(new Error('PDF处理失败：' + error.message));
+            }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// 处理Word文档
+async function processDocument(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                resolve(result.value);
+            } catch (error) {
+                reject(new Error('Word文档处理失败：' + error.message));
+            }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsArrayBuffer(file);
+    });
 }
 
 // 当页面加载完成时初始化

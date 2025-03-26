@@ -2,7 +2,7 @@
   "api": {
     "key_encrypted": "U2FsdGVkX18lYIANUHzBKWd2fxT7FOPcOCXgPzGhSjxRRV45WjggnrsZ+2fAZ6ezhnv9mzbd5wqnypPOU1+tgvliwjVScdGXdguPfbsbRoDU2rlalAJBJVwnCUfBJeCq",
     "url": "https://openrouter.ai/api/v1/chat/completions",
-    "default_model": "deepseek/deepseek-r1-zero:free",
+    "default_model": "deepseek/deepseek-r1:free",
     "referer": "http://localhost",
     "title": "AI Chat Test",
     "key_segments": {
@@ -10,5 +10,12 @@
       "segment2": "U2FsdGVkX19ZIBUWOT1R0LrEUa4qDzRzB5AD/HFxJNZzBWH0SMMOd5m0095+H/NA",
       "segment3": "U2FsdGVkX19+iBz/oX1t0USa2u6dG5RgK+YM4rrzFMzkoNPOk84vHL6PdGEptWVM"
     }
-  }
+  },
+  "api_key": "sk-1234567890abcdef",
+  "api_base": "https://api.deepseek.com/v1",
+  "max_tokens": 4096,
+  "temperature": 0.7,
+  "top_p": 0.95,
+  "frequency_penalty": 0,
+  "presence_penalty": 0
 }

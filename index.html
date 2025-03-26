@@ -3,14 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Origin - AI对话平台</title>
+    <title>Origin</title>
     <!-- Favicon (使用内联SVG) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><path d='M14 2C7.373 2 2 7.373 2 14C2 20.627 7.373 26 14 26C20.627 26 26 20.627 26 14C26 7.373 20.627 2 14 2ZM14 5C18.418 5 22 8.582 22 13C22 17.418 18.418 21 14 21C9.582 21 6 17.418 6 13C6 8.582 9.582 5 14 5Z' fill='%233a8dff'/></svg>">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/thinkMode.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <meta name="description" content="Origin - 全新的AI对话平台">
+    <meta name="description" content="Origin - 革新世界的原点">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- 添加PDF处理库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+    <!-- 添加Word文档处理库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -97,7 +102,7 @@
                         </button>
                         
                         <div class="model-selector">
-                            <span>Origin AI</span>
+                            <span>Origin</span>
                             <i class="fas fa-chevron-down" aria-hidden="true"></i>
                             <div class="model-dropdown">
                                 <div class="model-dropdown-item" data-model="deepseek/deepseek-chat-v3-0324:free">
@@ -105,9 +110,9 @@
                                         <div class="model-name">Deepseek Chat V3</div>
                                     </div>
                                 </div>
-                                <div class="model-dropdown-item selected" data-model="deepseek/deepseek-r1-zero:free">
+                                <div class="model-dropdown-item selected" data-model="deepseek/deepseek-r1:free">
                                     <div>
-                                        <div class="model-name">Deepseek R1 Zero</div>
+                                        <div class="model-name">Deepseek R1</div>
                                     </div>
                                 </div>
                             </div>
@@ -132,7 +137,7 @@
                 </div>
                 <div class="message-content-wrapper">
                     <div class="message-header">
-                        <span class="message-sender">Origin AI</span>
+                        <span class="message-sender">Origin</span>
                         <span class="message-time"></span>
                     </div>
                     <div class="message-content"></div>
@@ -150,7 +155,7 @@
                     <div class="message-content"></div>
                 </div>
                 <div class="message-avatar">
-                    <div class="avatar-text">KQ</div>
+                    <div class="avatar-text">Q</div>
                 </div>
             </div>
         </template>
