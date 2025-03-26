@@ -25,19 +25,6 @@ class ApiService {
     }
 
     /**
-     * 获取当前选择的模型
-     * @returns {string} 当前模型ID
-     */
-    getCurrentModelId() {
-        // 检查全局getCurrentModel函数是否存在
-        if (typeof window.getCurrentModel === 'function') {
-            return window.getCurrentModel();
-        }
-        // 否则使用配置中的默认模型
-        return this.config?.defaultModel || 'deepseek/deepseek-r1-zero:free';
-    }
-
-    /**
      * 调用AI聊天API
      * @param {string} userMessage 用户消息
      * @param {string} model 使用的模型，不指定则使用默认模型
@@ -55,7 +42,7 @@ class ApiService {
         try {
             // 准备请求参数
             const requestBody = {
-                model: model || this.getCurrentModelId(),
+                model: model || this.config.defaultModel,
                 messages: [{ role: 'user', content: userMessage }],
                 stream: stream
             };
@@ -94,10 +81,11 @@ class ApiService {
      * @param {function} onChunk 处理每个响应片段的回调
      * @param {function} onComplete 处理完成的回调
      * @param {function} onError 处理错误的回调
+     * @param {string} model 使用的模型
      */
-    async streamChatCompletion(userMessage, onChunk, onComplete, onError) {
+    async streamChatCompletion(userMessage, onChunk, onComplete, onError, model = null) {
         try {
-            const response = await this.chatCompletion(userMessage, null, true);
+            const response = await this.chatCompletion(userMessage, model, true);
             
             // 处理流式响应
             const reader = response.body.getReader();
@@ -161,11 +149,17 @@ class ApiService {
      * 聊天API的别名方法，用于与旧代码兼容
      * @param {string} userMessage 用户消息
      * @param {string} mode 聊天模式（普通、深度或思考）
+     * @param {string} customModel 自定义模型，覆盖配置中的模型
      * @returns {Promise<Object>} API响应结果
      */
-    async getChatCompletion(userMessage, mode) {
-        // 根据模式选择适当的模型
-        let model = this.getCurrentModelId();
+    async getChatCompletion(userMessage, mode, customModel = null) {
+        // 如果提供了自定义模型，则使用它
+        if (customModel) {
+            return this.chatCompletion(userMessage, customModel, false);
+        }
+        
+        // 否则根据模式选择适当的模型
+        let model = this.config?.defaultModel;
         
         if (mode === 'deep') {
             model = this.config?.deepSearchModel || model;

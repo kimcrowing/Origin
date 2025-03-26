@@ -679,50 +679,51 @@ button:focus {
     font-size: 12px;
 }
 
-/* 模型下拉菜单样式 */
+/* 模型选择下拉菜单 */
 .model-dropdown {
     position: absolute;
     bottom: 100%;
     left: 0;
-    min-width: 180px;
-    background-color: var(--menu-bg);
+    background-color: var(--bg-color);
     border-radius: 8px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-    margin-bottom: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 250px;
     z-index: 100;
     overflow: hidden;
     display: none;
-    border: 1px solid rgba(128, 128, 128, 0.1);
-    transition: background-color 0.3s ease;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
 }
 
-.model-selector:hover .model-dropdown,
-.model-dropdown.active {
-    display: block !important;
-    animation: fadeIn 0.2s ease;
+.model-selector.active .model-dropdown {
+    display: block;
 }
 
-.model-option {
-    padding: 10px 16px;
+.model-dropdown-item {
+    padding: 10px 12px;
     cursor: pointer;
-    font-size: 14px;
+    transition: background-color 0.2s ease;
     display: flex;
     align-items: center;
-    transition: background-color 0.2s ease;
 }
 
-.model-option:hover {
+.model-dropdown-item:hover {
     background-color: rgba(128, 128, 128, 0.1);
 }
 
-.model-option .model-selected {
-    margin-right: 8px;
+.model-dropdown-item.selected {
+    background-color: rgba(0, 120, 212, 0.1);
     color: var(--accent-blue);
-    display: none;
 }
 
-.model-option[data-selected="true"] .model-selected {
-    display: inline-block;
+.model-dropdown-item .model-name {
+    font-weight: 500;
+}
+
+.model-dropdown-item .model-description {
+    font-size: 12px;
+    color: var(--secondary-text);
+    margin-top: 2px;
 }
 
 /* 响应式设计 */

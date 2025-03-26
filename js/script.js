@@ -16,6 +16,7 @@ const newChatBtn = document.querySelector('.fa-edit').closest('.header-btn');
 const deepSearchToggle = document.getElementById('deep-search-toggle') || { checked: false };
 const streamToggle = document.getElementById('stream-toggle') || { checked: true };
 const thinkToggle = document.getElementById('think-toggle') || { checked: false };
+const modelSelector = document.querySelector('.model-selector');
 
 // 用户登录状态管理
 let currentUser = null;
@@ -33,6 +34,9 @@ let currentFile = null;
 let sessions = [];
 let currentSessionId = null;
 
+// 当前所选模型
+let currentModel = 'deepseek/deepseek-r1-zero:free';
+
 // 初始化函数
 function init() {
     // 检查用户登录状态
@@ -46,9 +50,6 @@ function init() {
     submitBtn.addEventListener('click', function(e) {
         handleSubmit(e);
     });
-    
-    // 初始化模型选择器
-    initModelSelector();
     
     // 设置输入框按键事件（Enter键发送）
     chatInput.addEventListener('keydown', function(e) {
@@ -80,6 +81,9 @@ function init() {
     newChatBtn.addEventListener('click', function() {
         createNewSession('新对话');
     });
+    
+    // 初始化模型选择器
+    initModelSelector();
     
     // 文件选择事件 - 使用内联函数定义，避免引用未定义的handleFileUpload
     fileInput.addEventListener('change', function(event) {
@@ -948,15 +952,15 @@ function handleSubmit(event) {
     // 根据模式确定使用流式响应还是普通响应
     if (isStreamingMode) {
         // 使用流式响应
-        streamAIResponse(userMessage, mode);
+        streamAIResponse(userMessage, mode, currentModel);
     } else {
         // 使用普通响应
-        generateAIResponse(userMessage, mode);
+        generateAIResponse(userMessage, mode, currentModel);
     }
 }
 
 // 使用流式响应生成AI回复
-async function streamAIResponse(userMessage, mode) {
+async function streamAIResponse(userMessage, mode, model = null) {
     // 生成消息ID，用于防止重复添加
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -993,6 +997,7 @@ async function streamAIResponse(userMessage, mode) {
     let fullResponse = '';
     
     try {
+        // 使用指定的模型
         await apiService.streamChatCompletion(
             userMessage,
             // 处理每个响应片段
@@ -1058,7 +1063,8 @@ async function streamAIResponse(userMessage, mode) {
                     // 保存当前会话
                     saveCurrentSession();
                 }
-            }
+            },
+            model  // 添加模型参数
         );
     } catch (error) {
         console.error('处理流式响应时出错:', error);
@@ -1250,9 +1256,10 @@ function getCurrentTime() {
 }
 
 // 生成AI响应
-async function generateAIResponse(userMessage, mode) {
+async function generateAIResponse(userMessage, mode, model = null) {
     try {
-        const response = await apiService.getChatCompletion(userMessage, mode);
+        // 使用指定的模型调用API
+        const response = await apiService.getChatCompletion(userMessage, mode, model);
         
         // 移除思考指示器
         removeThinkingIndicator();
@@ -2717,77 +2724,61 @@ function removeThinkingIndicator() {
 
 // 初始化模型选择器
 function initModelSelector() {
-    const modelSelector = document.querySelector('.model-selector');
-    const currentModelSpan = document.getElementById('current-model');
-    const modelOptions = document.querySelectorAll('.model-option');
-    const defaultModel = 'deepseek/deepseek-r1-zero:free'; // 默认模型
+    // 检查元素是否存在
+    if (!modelSelector) return;
     
-    // 从localStorage获取保存的模型选择
-    let selectedModel = localStorage.getItem('selectedModel') || defaultModel;
-    
-    // 更新当前显示的模型名称和样式
-    function updateModelDisplay() {
-        // 更新当前选中的模型标签
-        modelOptions.forEach(option => {
-            const model = option.getAttribute('data-model');
-            if (model === selectedModel) {
-                option.classList.add('selected');
-                currentModelSpan.textContent = option.textContent;
-            } else {
-                option.classList.remove('selected');
-            }
-        });
-        
-        // 如果没有找到匹配的模型，使用默认显示
-        if (!currentModelSpan.textContent || currentModelSpan.textContent === 'Origin AI') {
-            modelOptions.forEach(option => {
-                if (option.getAttribute('data-model') === defaultModel) {
-                    currentModelSpan.textContent = option.textContent;
-                }
-            });
-        }
-    }
-    
-    // 初始化时更新显示
-    updateModelDisplay();
+    // 保存对下拉菜单的引用
+    const modelDropdown = modelSelector.querySelector('.model-dropdown');
     
     // 点击模型选择器显示/隐藏下拉菜单
     modelSelector.addEventListener('click', function(e) {
-        e.stopPropagation();
+        e.stopPropagation(); // 防止冒泡到document
         modelSelector.classList.toggle('active');
     });
     
     // 点击页面其他地方关闭下拉菜单
-    document.addEventListener('click', function(e) {
-        if (!modelSelector.contains(e.target)) {
-            modelSelector.classList.remove('active');
-        }
+    document.addEventListener('click', function() {
+        modelSelector.classList.remove('active');
     });
     
-    // 点击模型选项
-    modelOptions.forEach(option => {
-        option.addEventListener('click', function(e) {
+    // 防止点击下拉菜单内容时菜单关闭
+    if (modelDropdown) {
+        modelDropdown.addEventListener('click', function(e) {
             e.stopPropagation();
+        });
+    }
+    
+    // 处理模型选择
+    const modelItems = document.querySelectorAll('.model-dropdown-item');
+    modelItems.forEach(item => {
+        item.addEventListener('click', function() {
+            // 获取选中的模型
+            const selectedModel = this.getAttribute('data-model');
             
-            // 获取选择的模型
-            selectedModel = this.getAttribute('data-model');
-            
-            // 保存到localStorage
-            localStorage.setItem('selectedModel', selectedModel);
-            
-            // 更新模型显示
-            updateModelDisplay();
-            
-            // 关闭下拉菜单
-            modelSelector.classList.remove('active');
+            // 更新当前模型
+            if (selectedModel) {
+                currentModel = selectedModel;
+                
+                // 更新UI
+                modelItems.forEach(mi => mi.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                // 更新选择器显示的文本
+                const modelName = this.querySelector('.model-name').textContent;
+                modelSelector.querySelector('span').textContent = modelName;
+                
+                // 关闭下拉菜单
+                modelSelector.classList.remove('active');
+                
+                console.log('已选择模型:', currentModel);
+            }
         });
     });
-}
-
-// 获取当前选择的模型
-function getCurrentModel() {
-    return localStorage.getItem('selectedModel') || 'deepseek/deepseek-r1-zero:free';
-}
-
-// 将函数暴露给window对象
-window.getCurrentModel = getCurrentModel;
+    
+    // 初始化显示当前模型名称
+    const selectedItem = document.querySelector('.model-dropdown-item.selected');
+    if (selectedItem) {
+        const modelName = selectedItem.querySelector('.model-name').textContent;
+        modelSelector.querySelector('span').textContent = modelName;
+    }
+} 
