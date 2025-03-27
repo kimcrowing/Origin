@@ -323,13 +323,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
-    height: 32px;
-    background-color: rgba(128, 128, 128, 0.15);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 8px 16px;
+    height: 24px;
+    background-color: rgba(74, 123, 255, 0.15);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
+    width: auto;
+    max-width: 90px;
+    margin-left: 10px;
+    border: 1px solid rgba(74, 123, 255, 0.2);
 }
 
 .thinking-dots::before {
@@ -339,8 +343,8 @@
     left: -100%;
     width: 50%;
     height: 100%;
-    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
-    animation: shimmer 2s infinite;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 1.5s infinite;
     z-index: 1;
 }
 
@@ -354,13 +358,13 @@
 }
 
 .dot {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background-color: var(--accent-blue);
-    margin: 0 4px;
-    opacity: 0.8;
-    animation: dot-pulse 1.5s infinite ease-in-out;
+    margin: 0 2px;
+    opacity: 0.85;
+    animation: dot-pulse 1.2s infinite ease-in-out;
     position: relative;
     z-index: 2;
 }
@@ -375,14 +379,13 @@
 
 @keyframes dot-pulse {
     0%, 100% {
-        transform: scale(0.6);
-        opacity: 0.7;
-        box-shadow: 0 0 0 rgba(74, 123, 255, 0);
+        transform: scale(0.8);
+        opacity: 0.8;
     }
     50% {
-        transform: scale(1.4);
+        transform: scale(1.2);
         opacity: 1;
-        box-shadow: 0 0 5px rgba(74, 123, 255, 0.5);
+        box-shadow: 0 0 4px rgba(74, 123, 255, 0.6);
     }
 }
 
