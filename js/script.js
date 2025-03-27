@@ -981,7 +981,7 @@ function handleSubmit(event) {
         // 添加等待提示消息
         const waitingMessage = document.createElement('div');
         waitingMessage.className = 'waiting-message';
-        waitingMessage.innerHTML = '<i class="fas fa-info-circle"></i> AI正在思考中，请耐心等待...';
+        waitingMessage.innerHTML = '<i class="fas fa-info-circle"></i>';
         waitingMessage.id = 'waiting-message';
         
         // 将提示添加到思考指示器之后
@@ -1124,7 +1124,6 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 <span class="anim-dot"></span>
             </div>
         </div>
-        <div class="progress-status">AI正在思考...</div>
     `;
     messageContent.appendChild(progressIndicator);
     

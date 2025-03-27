@@ -183,7 +183,13 @@ class ThinkModeService {
           </div>
           ` : ''}
           <div class="think-result-content">
-            <div class="think-result-placeholder">AI正在思考中...</div>
+            <div class="think-result-placeholder">
+              <div class="think-dots-animation">
+                <span class="think-dot"></span>
+                <span class="think-dot"></span>
+                <span class="think-dot"></span>
+              </div>
+            </div>
           </div>
           <div class="think-result-actions" style="display: none;">
             <button class="btn-copy-result"><i class="fas fa-copy"></i> 复制结果</button>
