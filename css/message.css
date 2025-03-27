@@ -450,8 +450,8 @@
 
 /* 响应进度显示 */
 .response-progress {
-    margin: 8px 0;
-    padding: 4px 8px;
+    margin: 4px 0;
+    padding: 2px 4px;
     border-radius: 8px;
     background-color: rgba(74, 123, 255, 0.03);
     animation: fadeInUp 0.4s ease;
@@ -472,7 +472,7 @@
 
 .progress-bar {
     width: 100%;
-    min-height: 16px;
+    min-height: 12px;
     background-color: transparent;
     border-radius: 4px;
     margin-bottom: 0;
@@ -488,7 +488,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 16px;
+    height: 12px;
 }
 
 .anim-dot {
