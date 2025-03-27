@@ -1872,7 +1872,6 @@ function processParagraphs(lines) {
     
     const result = [];
     let paragraphContent = '';
-    let consecutiveEmptyLines = 0;
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -1893,17 +1892,8 @@ function processParagraphs(lines) {
         // 处理HTML元素、占位符或空行
         if (isHTML || isPlaceholder) {
             result.push(line);
-            consecutiveEmptyLines = 0;
-        } else if (isEmpty) {
-            // 只在连续空行数小于2时添加空行，减少过多的空行
-            if (consecutiveEmptyLines < 1) {
-                result.push('');
-            }
-            consecutiveEmptyLines++;
-        } else {
+        } else if (!isEmpty) {
             // 普通文本内容
-            consecutiveEmptyLines = 0;
-            
             if (!paragraphContent) {
                 // 开始新段落
                 paragraphContent = line;
@@ -1920,8 +1910,8 @@ function processParagraphs(lines) {
         result.push(`<p>${paragraphContent}</p>`);
     }
     
-    // 返回处理后的HTML，移除多余的空行
-    return result.filter(line => line !== '' || Math.random() < 0.3).join('\n');
+    // 返回处理后的HTML，完全移除空行
+    return result.filter(line => line !== '').join('');
 }
 
 // 转义HTML特殊字符

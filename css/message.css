@@ -91,6 +91,8 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     overflow-wrap: break-word;
     word-break: break-word;
+    display: flex;
+    flex-direction: column;
 }
 
 .user-message .message-content {
@@ -116,12 +118,12 @@
 
 /* 段落样式 */
 .message-content p {
-    margin: 10px 0;
-    line-height: 1.6;
+    margin: 6px 0;
+    line-height: 1.5;
 }
 
 .message-content p + p {
-    margin-top: 8px;  /* 相邻段落间距减小 */
+    margin-top: 4px;  /* 相邻段落间距更小 */
 }
 
 .message-content h1 + p,
@@ -129,14 +131,32 @@
 .message-content h3 + p,
 .message-content h4 + p,
 .message-content h5 + p {
-    margin-top: 6px;  /* 标题下方段落间距更小 */
+    margin-top: 4px;  /* 标题下方段落间距更小 */
 }
 
 .message-content hr {
-    margin: 12px 0;
+    margin: 8px 0;
     border: none;
     height: 1px;
     background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 段落分隔样式 */
+.message-content p:not(:last-child) {
+    margin-bottom: 0;
+}
+
+/* 修复内容过度分离的问题 */
+.message-content > *:not(pre):not(ul):not(ol):not(blockquote):not(table) {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+}
+
+/* 确保段落连贯性 */
+.message-content > * {
+    margin-top: 0 !important;
+    margin-bottom: 5px !important;
 }
 
 /* 标题样式 */
@@ -239,31 +259,6 @@
     margin: 3px 0;
     line-height: 1.5;
     display: list-item;
-}
-
-/* 优化段落间距 */
-.message-content p {
-    margin: 10px 0;
-    line-height: 1.6;
-}
-
-.message-content p + p {
-    margin-top: 8px;  /* 相邻段落间距减小 */
-}
-
-.message-content h1 + p,
-.message-content h2 + p,
-.message-content h3 + p,
-.message-content h4 + p,
-.message-content h5 + p {
-    margin-top: 6px;  /* 标题下方段落间距更小 */
-}
-
-.message-content hr {
-    margin: 12px 0;
-    border: none;
-    height: 1px;
-    background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* 防止列表和代码块的换行问题 */
