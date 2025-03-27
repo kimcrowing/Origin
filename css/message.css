@@ -472,7 +472,7 @@
 
 .progress-bar {
     width: 100%;
-    min-height: 12px;
+    min-height: 8px;
     background-color: transparent;
     border-radius: 4px;
     margin-bottom: 0;
