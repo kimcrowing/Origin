@@ -1390,53 +1390,6 @@ async function streamAIResponse(userMessage, mode, model = null) {
         scrollToBottom();
     };
     
-    // 添加内容锚点导航 - 注释掉相关功能
-    /*
-    const addContentAnchors = (contentElement) => {
-        // 查找标题元素
-        const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        if (headings.length < 2) return; // 少于2个标题不需要锚点
-        
-        // 创建锚点导航容器
-        const anchorNav = document.createElement('div');
-        anchorNav.className = 'anchor-navigation';
-        anchorNav.innerHTML = '<div class="anchor-title">快速导航</div><div class="anchor-links"></div>';
-        
-        const linkContainer = anchorNav.querySelector('.anchor-links');
-        
-        // 为每个标题创建锚点
-        headings.forEach((heading, index) => {
-            const headingId = `heading-${messageId}-${index}`;
-            heading.id = headingId;
-            
-            // 创建锚点链接
-            const anchorLink = document.createElement('a');
-            anchorLink.href = `#${headingId}`;
-            anchorLink.className = `anchor-link level-${heading.tagName.toLowerCase()}`;
-            anchorLink.textContent = heading.textContent.trim();
-            
-            // 添加点击事件
-            anchorLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                // 滚动到标题位置
-                heading.scrollIntoView({behavior: 'smooth'});
-                
-                // 添加高亮效果
-                heading.classList.add('highlight-heading');
-                setTimeout(() => {
-                    heading.classList.remove('highlight-heading');
-                }, 2000);
-            });
-            
-            linkContainer.appendChild(anchorLink);
-        });
-        
-        // 添加到内容顶部
-        contentElement.insertBefore(anchorNav, contentElement.firstChild);
-    };
-    */
-    
     try {
         // 启动自动保存
         setupAutoSave();
