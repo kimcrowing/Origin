@@ -314,25 +314,27 @@
 
 /* 思考动画优化 */
 .thinking {
-    opacity: 0.8;
+    opacity: 1;
+    margin-bottom: 20px;
 }
 
 .thinking-dots {
     display: flex;
     align-items: center;
+    justify-content: center;
     padding: 16px;
     height: 32px;
-    background-color: rgba(128, 128, 128, 0.1);
+    background-color: rgba(128, 128, 128, 0.15);
     border-radius: 14px;
 }
 
 .dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background-color: var(--text-color);
-    margin: 0 3px;
-    opacity: 0.6;
+    background-color: var(--accent-blue);
+    margin: 0 4px;
+    opacity: 0.8;
     animation: dot-pulse 1.5s infinite ease-in-out;
 }
 
@@ -346,11 +348,11 @@
 
 @keyframes dot-pulse {
     0%, 100% {
-        transform: scale(0.8);
-        opacity: 0.6;
+        transform: scale(0.6);
+        opacity: 0.7;
     }
     50% {
-        transform: scale(1.2);
+        transform: scale(1.4);
         opacity: 1;
     }
 }

@@ -2807,43 +2807,28 @@ function showThinkingIndicator() {
     // 克隆思考指示器模板
     const thinkingElement = thinkingTemplate.content.cloneNode(true);
     
-    // 检查模板内部结构
-    const thinkingContainer = thinkingElement.querySelector('.thinking-indicator');
-    if (!thinkingContainer) {
-        // 如果没有找到.thinking-indicator元素，使用.thinking元素作为容器
-        const thinkingMessage = thinkingElement.querySelector('.thinking');
-        if (thinkingMessage) {
-            // 添加唯一ID
-            const indicatorId = `thinking-${Date.now()}`;
-            thinkingMessage.id = indicatorId;
-            
-            // 保存当前的思考指示器ID
-            currentThinkingIndicator = indicatorId;
-            
-            // 添加到消息容器
-            messagesContainer.appendChild(thinkingElement);
-            
-            // 滚动到底部
-            scrollToBottom();
-            return;
-        }
+    // 使用.thinking元素作为容器
+    const thinkingMessage = thinkingElement.querySelector('.thinking');
+    if (thinkingMessage) {
+        // 添加唯一ID
+        const indicatorId = `thinking-${Date.now()}`;
+        thinkingMessage.id = indicatorId;
         
-        console.error('思考指示器模板结构不正确');
+        // 保存当前的思考指示器ID
+        currentThinkingIndicator = indicatorId;
+        
+        // 添加到消息容器
+        messagesContainer.appendChild(thinkingElement);
+        
+        // 滚动到底部
+        scrollToBottom();
+        
+        // 调试输出，确认指示器已添加
+        console.log('思考指示器已添加, ID:', indicatorId);
         return;
     }
     
-    // 添加唯一ID
-    const indicatorId = `thinking-${Date.now()}`;
-    thinkingContainer.id = indicatorId;
-    
-    // 保存当前的思考指示器ID
-    currentThinkingIndicator = indicatorId;
-    
-    // 添加到消息容器
-    messagesContainer.appendChild(thinkingElement);
-    
-    // 滚动到底部
-    scrollToBottom();
+    console.error('思考指示器模板结构不正确');
 }
 
 // 移除思考指示器
