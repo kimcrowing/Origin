@@ -1132,7 +1132,8 @@ function formatMarkdown(markdown) {
     const codeBlocks = [];
     markdown = markdown.replace(/```(\w*)([\s\S]*?)```/g, (match, language, code) => {
         const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
-        codeBlocks.push(`<pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`);
+        // 添加data-language属性以便CSS可以显示语言标签
+        codeBlocks.push(`<pre data-language="${language || ''}"><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`);
         return placeholder;
     });
     
@@ -1144,32 +1145,60 @@ function formatMarkdown(markdown) {
         return placeholder;
     });
     
-    // 处理表格
-    markdown = markdown.replace(/^\|(.+)\|$/gm, (match, content) => {
-        const cells = content.split('|').map(cell => cell.trim());
-        return `<tr>${cells.map(cell => `<td>${cell}</td>`).join('')}</tr>`;
-    });
+    // 处理表格 - 改进表格处理逻辑
+    const tableRows = [];
+    let tableStarted = false;
+    let tableHasHeader = false;
     
-    // 处理表格分隔行 |------|------|
-    markdown = markdown.replace(/^\|([-:\|\s]+)\|$/gm, (match, content) => {
-        // 检测是否是表格分隔行
-        if (!/^[\s\-:|]+$/.test(content)) return match;
-        
-        // 移除这一行并添加表格标记
-        return '<table-separator>';
-    });
+    // 先提取所有表格行
+    const lines = markdown.split('\n');
+    let processedLines = [];
     
-    // 组合表格
-    markdown = markdown.replace(/<tr>.*?<\/tr>\s*<table-separator>\s*(<tr>.*?<\/tr>\s*)+/g, (match) => {
-        const rows = match.split(/\s*<table-separator>\s*/);
-        const headerRow = rows[0];
-        const bodyRows = rows.slice(1).join('');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         
-        return `<table><thead>${headerRow.replace(/<td>/g, '<th>').replace(/<\/td>/g, '</th>')}</thead><tbody>${bodyRows}</tbody></table>`;
-    });
+        // 检测表格行
+        if (/^\|(.+)\|$/.test(line)) {
+            if (!tableStarted) {
+                tableStarted = true;
+                tableRows.push(line);
+                
+                // 检测下一行是否是分隔行
+                if (i + 1 < lines.length && /^\|([-:\|\s]+)\|$/.test(lines[i+1]) && /^[\s\-:|]+$/.test(lines[i+1].replace(/^\||\|$/g, ''))) {
+                    tableHasHeader = true;
+                    tableRows.push(lines[i+1]);
+                    i++; // 跳过分隔行
+                }
+            } else {
+                tableRows.push(line);
+            }
+        } else {
+            // 如果之前有表格，现在结束了
+            if (tableStarted) {
+                // 处理表格
+                const tableHtml = processTable(tableRows, tableHasHeader);
+                processedLines.push(tableHtml);
+                
+                // 重置表格状态
+                tableRows.length = 0;
+                tableStarted = false;
+                tableHasHeader = false;
+            }
+            
+            processedLines.push(line);
+        }
+    }
+    
+    // 处理可能在结尾的表格
+    if (tableStarted && tableRows.length > 0) {
+        const tableHtml = processTable(tableRows, tableHasHeader);
+        processedLines.push(tableHtml);
+    }
+    
+    markdown = processedLines.join('\n');
     
     // 处理图片 ![alt](src)
-    markdown = markdown.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1">');
+    markdown = markdown.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" loading="lazy">');
     
     // 处理链接 [text](url)
     markdown = markdown.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
@@ -1202,46 +1231,14 @@ function formatMarkdown(markdown) {
     // 处理斜体
     markdown = markdown.replace(/\*(.*?)\*/g, '<em>$1</em>');
     
-    // 处理有序和无序列表
-    // 首先将列表项转换为特殊标记
-    markdown = markdown.replace(/^\s*[\*\-•]\s+(.*$)/gm, '<ul-item>$1</ul-item>');
-    markdown = markdown.replace(/^\s*(\d+)\.\s+(.*$)/gm, '<ol-item>$2</ol-item>');
+    // 处理有序和无序列表 - 改进列表处理
+    const processedMarkdown = processLists(markdown);
     
-    // 然后将连续的列表项组合成列表
-    markdown = markdown.replace(/(<ul-item>.*?<\/ul-item>(?:\n|$))+/g, (match) => {
-        return '<ul>' + match.replace(/<ul-item>(.*?)<\/ul-item>(?:\n|$)/g, '<li>$1</li>') + '</ul>';
-    });
+    // 处理段落 - 简化段落处理逻辑
+    const paragraphLines = processedMarkdown.split('\n');
+    const processedParagraphs = processParagraphs(paragraphLines);
     
-    markdown = markdown.replace(/(<ol-item>.*?<\/ol-item>(?:\n|$))+/g, (match) => {
-        return '<ol>' + match.replace(/<ol-item>(.*?)<\/ol-item>(?:\n|$)/g, '<li>$1</li>') + '</ol>';
-    });
-    
-    // 处理段落
-    // 先分割成行
-    const lines = markdown.split('\n');
-    let inParagraph = false;
-    
-    for (let i = 0; i < lines.length; i++) {
-        // 如果当前行不是HTML标签开始，且不是空行
-        if (!/^<\w+/.test(lines[i]) && lines[i].trim() !== '' && !inParagraph) {
-            lines[i] = '<p>' + lines[i];
-            inParagraph = true;
-        } 
-        // 如果当前行是空行或者下一行是HTML标签开始，结束段落
-        else if (inParagraph && (lines[i].trim() === '' || (i < lines.length-1 && /^<\w+/.test(lines[i+1])))) {
-            lines[i] = lines[i] + '</p>';
-            inParagraph = false;
-        }
-    }
-    // 如果最后还在段落中，关闭段落
-    if (inParagraph) {
-        lines[lines.length-1] += '</p>';
-    }
-    
-    markdown = lines.join('\n');
-    
-    // 处理空行
-    markdown = markdown.replace(/\n\s*\n/g, '\n<br>\n');
+    markdown = processedParagraphs;
     
     // 恢复行内代码
     inlineCodes.forEach((code, index) => {
@@ -1254,6 +1251,167 @@ function formatMarkdown(markdown) {
     });
     
     return markdown;
+}
+
+// 处理表格的辅助函数
+function processTable(tableRows, hasHeader) {
+    if (tableRows.length === 0) return '';
+    
+    let html = '<table>';
+    
+    // 处理表头
+    if (hasHeader && tableRows.length >= 2) {
+        const headerCells = tableRows[0].split('|').slice(1, -1).map(cell => cell.trim());
+        html += '<thead><tr>';
+        headerCells.forEach(cell => {
+            html += `<th>${cell}</th>`;
+        });
+        html += '</tr></thead>';
+        
+        // 移除表头和分隔行
+        tableRows = tableRows.slice(2);
+    }
+    
+    // 处理表体
+    if (tableRows.length > 0) {
+        html += '<tbody>';
+        tableRows.forEach(row => {
+            const cells = row.split('|').slice(1, -1).map(cell => cell.trim());
+            html += '<tr>';
+            cells.forEach(cell => {
+                html += `<td>${cell}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody>';
+    }
+    
+    html += '</table>';
+    return html;
+}
+
+// 处理列表的辅助函数
+function processLists(markdown) {
+    // 处理无序列表
+    const ulRegex = /^(\s*)[\*\-•]\s+(.*?)$/gm;
+    let match;
+    let ulMatches = [];
+    
+    while ((match = ulRegex.exec(markdown)) !== null) {
+        ulMatches.push({
+            fullMatch: match[0],
+            indent: match[1].length,
+            content: match[2],
+            index: match.index
+        });
+    }
+    
+    // 处理有序列表
+    const olRegex = /^(\s*)(\d+)\.\s+(.*?)$/gm;
+    let olMatches = [];
+    
+    while ((match = olRegex.exec(markdown)) !== null) {
+        olMatches.push({
+            fullMatch: match[0],
+            indent: match[1].length,
+            number: match[2],
+            content: match[3],
+            index: match.index
+        });
+    }
+    
+    // 合并并按索引排序
+    const allMatches = [...ulMatches, ...olMatches].sort((a, b) => a.index - b.index);
+    
+    if (allMatches.length === 0) return markdown;
+    
+    // 替换列表
+    let result = markdown;
+    let offset = 0;
+    
+    for (let i = 0; i < allMatches.length; i++) {
+        const current = allMatches[i];
+        const isUl = 'number' in current === false;
+        
+        // 找出当前层级的所有连续列表项
+        let j = i;
+        const listItems = [];
+        
+        while (j < allMatches.length && 
+               ((isUl && !('number' in allMatches[j])) || (!isUl && 'number' in allMatches[j])) &&
+               allMatches[j].indent === current.indent) {
+            listItems.push(allMatches[j].content);
+            j++;
+        }
+        
+        if (listItems.length > 0) {
+            // 构建HTML
+            const listTag = isUl ? 'ul' : 'ol';
+            const listHtml = `<${listTag}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listTag}>`;
+            
+            // 替换原始文本
+            const startPos = current.index + offset;
+            const endPos = (j < allMatches.length ? allMatches[j].index : result.length) + offset;
+            const originalText = result.substring(startPos, endPos);
+            
+            result = result.substring(0, startPos) + listHtml + result.substring(endPos);
+            
+            // 更新偏移量
+            offset += listHtml.length - originalText.length;
+            
+            // 更新索引
+            i = j - 1;
+        }
+    }
+    
+    return result;
+}
+
+// 处理段落的辅助函数
+function processParagraphs(lines) {
+    const result = [];
+    let inParagraph = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const isEmptyLine = line.trim() === '';
+        const startsWithHtml = /^<\w+/.test(line);
+        
+        // 如果是空行，结束当前段落
+        if (isEmptyLine) {
+            if (inParagraph) {
+                result[result.length - 1] += '</p>';
+                inParagraph = false;
+            }
+            result.push('');
+            continue;
+        }
+        
+        // 如果是HTML标签开始，直接添加
+        if (startsWithHtml) {
+            if (inParagraph) {
+                result[result.length - 1] += '</p>';
+                inParagraph = false;
+            }
+            result.push(line);
+            continue;
+        }
+        
+        // 普通文本，添加到段落
+        if (!inParagraph) {
+            result.push('<p>' + line);
+            inParagraph = true;
+        } else {
+            result[result.length - 1] += ' ' + line;
+        }
+    }
+    
+    // 关闭最后的段落
+    if (inParagraph) {
+        result[result.length - 1] += '</p>';
+    }
+    
+    return result.join('\n');
 }
 
 // 转义HTML特殊字符
@@ -2540,44 +2698,46 @@ function formatFileSize(size) {
 
 // 处理上传文件
 async function processFile(file) {
-    const fileType = getFileTypeFromName(file.name);
-    let content = '';
-    
     try {
-        switch (fileType) {
-            case 'pdf':
-                content = await processPDF(file);
-                break;
-            case 'doc':
-            case 'docx':
-                content = await processDocument(file);
-                break;
-            case 'txt':
-                content = await file.text();
-                break;
-            default:
-                throw new Error('不支持的文件类型');
+        // 检查文件类型
+        const fileType = file.type.toLowerCase();
+        let content = '';
+        
+        // 检查文件类型
+        if (fileType === 'application/pdf') {
+            content = await processPDF(file);
+        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                   fileType === 'application/msword') {
+            content = await processDocument(file);
+        } else if (fileType === 'text/plain') {
+            content = await file.text();
+        } else {
+            throw new Error('不支持的文件类型');
         }
-
+        
         // 检查是否包含专利相关关键词
-        const keywords = ['审查意见通知书', '审查员', '专利', '权利要求'];
-        const hasPatentKeywords = keywords.some(keyword => content.includes(keyword));
+        const patentKeywords = ['审查意见通知书', '审查员', '专利', '权利要求'];
+        const hasPatentKeywords = patentKeywords.some(keyword => content.includes(keyword));
         
         if (hasPatentKeywords) {
-            // 添加系统提示消息
-            addMessageToUI('检测到专利相关文件，已加载专利答审模式。', 'system');
+            // 显示系统提示消息
+            showSystemMessage('检测到专利相关文件，已切换到专利答审模式');
             
-            // 将文件内容和提示词一起发送给AI
-            const prompt = `${PATENT_RESPONSE_PROMPT}\n\n审查意见通知书内容：\n${content}`;
-            await streamAIResponse(prompt, 'search', currentModel);
+            // 加载专利答审模式的提示词
+            const prompt = PATENT_RESPONSE_PROMPT;
+            
+            // 发送提示词和文件内容给AI
+            await sendMessage(prompt + '\n\n审查意见通知书内容：\n' + content);
         } else {
-            // 普通文件处理
-            addMessageToUI(`已上传文件：${file.name}`, 'system');
-            await streamAIResponse(`请分析以下文件内容：\n${content}`, 'search', currentModel);
+            // 显示普通文件上传提示
+            showSystemMessage('已上传文件，正在分析内容...');
+            
+            // 发送文件内容给AI
+            await sendMessage('请分析以下文件内容：\n\n' + content);
         }
     } catch (error) {
         console.error('文件处理错误:', error);
-        addMessageToUI(`文件处理失败：${error.message}`, 'system');
+        showSystemMessage('文件处理失败：' + error.message);
     }
 }
 
