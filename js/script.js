@@ -3065,7 +3065,7 @@ function addCopyButtonsToMessages() {
             // 创建复制按钮
             const copyBtn = document.createElement('button');
             copyBtn.className = 'copy-btn';
-            copyBtn.innerHTML = '<i class="fas fa-copy"></i><span class="copy-text">复制</span>';
+            copyBtn.innerHTML = '<i class="fas fa-copy fa-sm"></i><span class="copy-text">复制</span>';
             copyBtn.title = '复制内容';
             copyBtn.setAttribute('data-action', 'copy');
             
