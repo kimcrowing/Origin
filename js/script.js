@@ -1313,18 +1313,24 @@ async function streamAIResponse(userMessage, mode, model = null) {
                         // 应用格式化并更新显示
                         let formattedContent = fullResponse;
                         
+                        // 注释掉目录生成的逻辑
+                        /* 
                         // 如果内容足够长，生成目录
                         if (currentLength > 1000) { // 假设1000字符以上需要目录
                             formattedContent = generateTOC(formattedContent);
                         }
+                        */
                         
-                        // 确保完整渲染消息内容
+                        // 直接更新消息内容，不生成目录
                         messageContent.innerHTML = formatMessage(formattedContent);
                         
+                        // 不需要再添加目录了
+                        /* 
                         // 如果有目录，添加到内容顶部
                         if (tocContainer && !messageContent.querySelector('.response-toc')) {
                             messageContent.insertBefore(tocContainer, messageContent.firstChild);
                         }
+                        */
                         
                         // 重新添加进度指示器
                         messageContent.appendChild(progressIndicator);
@@ -1360,18 +1366,24 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 // 最终更新
                 let finalContent = fullResponse;
                 
+                // 注释掉目录生成的逻辑
+                /*
                 // 生成最终目录
                 if (fullResponse.length > 1000) {
                     finalContent = generateTOC(finalContent);
                 }
+                */
                 
-                // 确保完整渲染消息内容
+                // 直接更新消息内容，不生成目录
                 messageContent.innerHTML = formatMessage(finalContent);
                 
+                // 不需要再添加目录了
+                /*
                 // 如果有目录，添加到内容顶部
                 if (tocContainer && !messageContent.querySelector('.response-toc')) {
                     messageContent.insertBefore(tocContainer, messageContent.firstChild);
                 }
+                */
                 
                 // 重新添加思考区域（如果存在）
                 if (thinkingSection) {
@@ -1381,10 +1393,13 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 // 添加复制按钮
                 messageContent.appendChild(copyBtn);
                 
+                // 注释掉长文本导航和折叠功能
+                /*
                 // 添加长文本导航和折叠功能
                 if (fullResponse.length > 3000) { // 超过3000字符的文本添加折叠功能
                     addLongTextNavigation(messageContent);
                 }
+                */
                 
                 // 确保历史记录中不重复添加相同的消息
                 const existingMessage = chatHistory.find(msg => msg.id === messageId);
