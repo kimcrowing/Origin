@@ -1201,64 +1201,12 @@ async function streamAIResponse(userMessage, mode, model = null) {
         // 未来可以用它来更新动画状态或添加其他效果
     };
     
-    // 每接收到约100个token更新一次进度
-    // 假设平均回复约1000 tokens
-    const progressUpdateInterval = 100;
+    // 提高进度更新频率，避免内存问题
+    const progressUpdateInterval = 50; // 降低到50
     let lastProgressUpdate = 0;
     
-    // 生成结构化目录
-    const generateTOC = (content) => {
-        // 创建一个新的目录容器元素，而不是复用现有的
-        const newTocContainer = document.createElement('div');
-        newTocContainer.className = 'response-toc';
-        newTocContainer.innerHTML = '<div class="toc-title"><i class="fas fa-list"></i> 内容导航</div><ul class="toc-list"></ul>';
-        
-        // 提取标题
-        const headings = [];
-        const regex = /#{1,6}\s+(.+?)(?:\n|$)/g;
-        let match;
-        
-        while ((match = regex.exec(content)) !== null) {
-            const headingText = match[1].trim();
-            const level = match[0].trim().split(' ')[0].length; // 计算#的数量
-            const id = `heading-${Date.now()}-${headings.length}`;
-            
-            headings.push({
-                text: headingText,
-                level,
-                id
-            });
-        }
-        
-        // 如果有足够的标题，显示目录
-        if (headings.length >= 3) {
-            const tocList = newTocContainer.querySelector('.toc-list');
-            
-            headings.forEach(heading => {
-                const li = document.createElement('li');
-                li.className = `toc-item toc-level-${heading.level}`;
-                li.innerHTML = `<a href="#${heading.id}">${heading.text}</a>`;
-                
-                tocList.appendChild(li);
-            });
-            
-            // 保存目录容器到外部变量，使其可在其他地方使用
-            tocContainer = newTocContainer;
-            
-            // 为内容中的标题添加ID，但保留原内容结构
-            let updatedContent = content;
-            headings.forEach(heading => {
-                // 只添加ID属性，不改变markdown内容结构
-                const headingRegex = new RegExp(`(#{${heading.level}}\\s+${heading.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?:\\n|$)`, 'g');
-                updatedContent = updatedContent.replace(headingRegex, `$1 {#${heading.id}}\n`);
-            });
-            
-            // 返回处理后的内容，确保原始内容不会丢失
-            return updatedContent;
-        }
-        
-        return content;
-    };
+    // 分批处理响应的最大长度
+    const maxBatchLength = 10000; // 10KB的文本一次处理
     
     try {
         // 启动自动保存
@@ -1301,49 +1249,70 @@ async function streamAIResponse(userMessage, mode, model = null) {
                         // 更新进度
                         if (chunkSize > lastProgressUpdate) {
                             lastProgressUpdate = chunkSize;
-                            // 假设平均回复长度约10000字符
-                            const estimatedProgress = Math.min(95, (currentLength / 10000) * 100);
+                            // 假设平均回复长度约20000字符
+                            const estimatedProgress = Math.min(95, (currentLength / 20000) * 100);
                             updateProgress(estimatedProgress);
                         }
                         
                         // 处理流式响应的分段显示
                         responseParts.push(content);
                         
-                        // 应用格式化并更新显示
-                        let formattedContent = fullResponse;
-                        
-                        // 注释掉目录生成的逻辑
-                        /* 
-                        // 如果内容足够长，生成目录
-                        if (currentLength > 1000) { // 假设1000字符以上需要目录
-                            formattedContent = generateTOC(formattedContent);
+                        // 优化渲染性能 - 只在累积一定量的内容或时间间隔后更新UI
+                        // 这可以减少DOM操作频率，提高性能
+                        if (responseParts.length >= 10 || fullResponse.length % maxBatchLength === 0) {
+                            // 应用格式化并更新显示
+                            let formattedContent = fullResponse;
+                            
+                            // 注释掉目录生成的逻辑
+                            /* 
+                            // 如果内容足够长，生成目录
+                            if (currentLength > 1000) { // 假设1000字符以上需要目录
+                                formattedContent = generateTOC(formattedContent);
+                            }
+                            */
+                            
+                            try {
+                                // 直接更新消息内容，不生成目录
+                                messageContent.innerHTML = formatMessage(formattedContent);
+                                
+                                // 不需要再添加目录了
+                                /* 
+                                // 如果有目录，添加到内容顶部
+                                if (tocContainer && !messageContent.querySelector('.response-toc')) {
+                                    messageContent.insertBefore(tocContainer, messageContent.firstChild);
+                                }
+                                */
+                                
+                                // 重新添加进度指示器
+                                messageContent.appendChild(progressIndicator);
+                                
+                                // 重新添加思考区域（如果存在）
+                                if (thinkingSection) {
+                                    messageContent.appendChild(thinkingSection);
+                                }
+                                
+                                // 添加复制按钮
+                                messageContent.appendChild(copyBtn);
+                                
+                                // 清空响应部分缓存
+                                responseParts.length = 0;
+                                
+                                // 滚动到底部
+                                scrollToBottom();
+                            } catch (renderError) {
+                                console.error('渲染响应内容时出错:', renderError);
+                                // 尝试分批渲染
+                                try {
+                                    // 如果内容过长，尝试只渲染最新的部分
+                                    const lastPart = formattedContent.slice(-maxBatchLength);
+                                    messageContent.innerHTML += formatMessage(lastPart);
+                                    scrollToBottom();
+                                } catch (e) {
+                                    // 如果还是失败，只更新错误信息，但不中断流
+                                    console.error('分批渲染也失败:', e);
+                                }
+                            }
                         }
-                        */
-                        
-                        // 直接更新消息内容，不生成目录
-                        messageContent.innerHTML = formatMessage(formattedContent);
-                        
-                        // 不需要再添加目录了
-                        /* 
-                        // 如果有目录，添加到内容顶部
-                        if (tocContainer && !messageContent.querySelector('.response-toc')) {
-                            messageContent.insertBefore(tocContainer, messageContent.firstChild);
-                        }
-                        */
-                        
-                        // 重新添加进度指示器
-                        messageContent.appendChild(progressIndicator);
-                        
-                        // 重新添加思考区域（如果存在）
-                        if (thinkingSection) {
-                            messageContent.appendChild(thinkingSection);
-                        }
-                        
-                        // 添加复制按钮
-                        messageContent.appendChild(copyBtn);
-                        
-                        // 滚动到底部
-                        scrollToBottom();
                     }
                 }
             },
@@ -1362,43 +1331,76 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     progressIndicator.parentNode.removeChild(progressIndicator);
                 }
                 
-                // 最终更新
-                let finalContent = fullResponse;
-                
-                // 注释掉目录生成的逻辑
-                /*
-                // 生成最终目录
-                if (fullResponse.length > 1000) {
-                    finalContent = generateTOC(finalContent);
+                try {
+                    // 最终更新
+                    let finalContent = fullResponse;
+                    
+                    // 注释掉目录生成的逻辑
+                    /*
+                    // 生成最终目录
+                    if (fullResponse.length > 1000) {
+                        finalContent = generateTOC(finalContent);
+                    }
+                    */
+                    
+                    // 直接更新消息内容，不生成目录
+                    messageContent.innerHTML = formatMessage(finalContent);
+                    
+                    // 不需要再添加目录了
+                    /*
+                    // 如果有目录，添加到内容顶部
+                    if (tocContainer && !messageContent.querySelector('.response-toc')) {
+                        messageContent.insertBefore(tocContainer, messageContent.firstChild);
+                    }
+                    */
+                    
+                    // 重新添加思考区域（如果存在）
+                    if (thinkingSection) {
+                        messageContent.appendChild(thinkingSection);
+                    }
+                    
+                    // 添加复制按钮
+                    messageContent.appendChild(copyBtn);
+                    
+                    // 注释掉长文本导航和折叠功能
+                    /*
+                    // 添加长文本导航和折叠功能
+                    if (fullResponse.length > 3000) { // 超过3000字符的文本添加折叠功能
+                        addLongTextNavigation(messageContent);
+                    }
+                    */
+                } catch (finalRenderError) {
+                    console.error('最终渲染内容失败:', finalRenderError);
+                    // 尝试分批渲染
+                    try {
+                        const contentChunks = [];
+                        // 将长文本分成多个小块
+                        for (let i = 0; i < fullResponse.length; i += maxBatchLength) {
+                            contentChunks.push(fullResponse.slice(i, i + maxBatchLength));
+                        }
+                        
+                        // 清空内容
+                        messageContent.innerHTML = '';
+                        
+                        // 逐块添加内容
+                        contentChunks.forEach(chunk => {
+                            const chunkDiv = document.createElement('div');
+                            chunkDiv.innerHTML = formatMessage(chunk);
+                            messageContent.appendChild(chunkDiv);
+                        });
+                        
+                        // 重新添加思考区域
+                        if (thinkingSection) {
+                            messageContent.appendChild(thinkingSection);
+                        }
+                        
+                        // 添加复制按钮
+                        messageContent.appendChild(copyBtn);
+                    } catch (e) {
+                        console.error('分批渲染最终内容也失败:', e);
+                        messageContent.innerHTML = '<p>渲染过程出错，但内容已保存。请刷新页面重试。</p>';
+                    }
                 }
-                */
-                
-                // 直接更新消息内容，不生成目录
-                messageContent.innerHTML = formatMessage(finalContent);
-                
-                // 不需要再添加目录了
-                /*
-                // 如果有目录，添加到内容顶部
-                if (tocContainer && !messageContent.querySelector('.response-toc')) {
-                    messageContent.insertBefore(tocContainer, messageContent.firstChild);
-                }
-                */
-                
-                // 重新添加思考区域（如果存在）
-                if (thinkingSection) {
-                    messageContent.appendChild(thinkingSection);
-                }
-                
-                // 添加复制按钮
-                messageContent.appendChild(copyBtn);
-                
-                // 注释掉长文本导航和折叠功能
-                /*
-                // 添加长文本导航和折叠功能
-                if (fullResponse.length > 3000) { // 超过3000字符的文本添加折叠功能
-                    addLongTextNavigation(messageContent);
-                }
-                */
                 
                 // 确保历史记录中不重复添加相同的消息
                 const existingMessage = chatHistory.find(msg => msg.id === messageId);
@@ -1445,9 +1447,35 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 
                 // 添加错误消息，但保留已生成的内容
                 if (fullResponse) {
-                    messageContent.innerHTML = formatMessage(fullResponse);
-                    messageContent.innerHTML += `<p class="error-message">错误: ${error.message}</p>`;
-                    messageContent.innerHTML += `<p class="error-recovery">已保存已生成的内容，您可以刷新页面后重试。</p>`;
+                    try {
+                        messageContent.innerHTML = formatMessage(fullResponse);
+                        messageContent.innerHTML += `
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                错误: ${error.message || '连接中断'}
+                            </div>
+                            <div class="error-recovery">
+                                长文本接收过程中断，但已成功接收部分内容。
+                                <button id="retry-btn-${messageId}" class="retry-btn">
+                                    <i class="fas fa-redo"></i> 重试
+                                </button>
+                            </div>
+                        `;
+                        
+                        // 添加重试按钮事件
+                        setTimeout(() => {
+                            const retryBtn = document.getElementById(`retry-btn-${messageId}`);
+                            if (retryBtn) {
+                                retryBtn.addEventListener('click', () => {
+                                    // 重新发送请求，但从当前位置继续
+                                    streamAIResponse(userMessage + " (继续上次回答，从中断处继续)", mode, model);
+                                });
+                            }
+                        }, 100);
+                    } catch (e) {
+                        console.error('渲染错误消息失败:', e);
+                        messageContent.innerHTML = `<p>接收长文本时发生错误，但已保存部分内容。请刷新页面再试。</p>`;
+                    }
                 } else {
                     messageContent.innerHTML = `<p class="error-message">错误: ${error.message}</p>`;
                 }
@@ -1482,53 +1510,24 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     }));
                 }
             },
-            model  // 添加模型参数
+            model
         );
     } catch (error) {
-        console.error('处理流式响应时出错:', error);
+        console.error('调用流式API时发生错误:', error);
         
         // 清除自动保存
         if (autoSaveInterval) {
             clearInterval(autoSaveInterval);
-            autoSaveInterval = null;
         }
         
-        // 添加错误消息
-        messageContent.innerHTML = fullResponse ? formatMessage(fullResponse) : '';
-        messageContent.innerHTML += `<p class="error-message">抱歉，处理响应时出现问题: ${error.message}</p>`;
+        // 显示错误消息
+        messageContent.innerHTML = `
+            <p class="error-message">发生错误: ${error.message}</p>
+            <p>请稍后再试或刷新页面。</p>
+        `;
         
-        // 添加重试按钮
-        const retryBtn = document.createElement('button');
-        retryBtn.className = 'retry-btn';
-        retryBtn.innerHTML = '<i class="fas fa-redo"></i> 重试';
-        retryBtn.addEventListener('click', () => {
-            // 移除当前消息
-            messageWrapper.remove();
-            
-            // 重新尝试
-            streamAIResponse(userMessage, mode, model);
-        });
-        messageContent.appendChild(retryBtn);
-        
-        // 确保复制按钮存在
+        // 添加复制按钮
         messageContent.appendChild(copyBtn);
-        
-        // 确保历史记录中不重复添加相同的消息
-        const existingMessage = chatHistory.find(msg => msg.id === messageId);
-        if (!existingMessage && fullResponse) {
-            // 添加消息到历史记录
-            chatHistory.push({
-                id: messageId,
-                sender: 'ai',
-                content: fullResponse,
-                thinking: thinkingProcess,
-                timestamp: Date.now(),
-                error: error.message
-            });
-            
-            // 保存当前会话
-            saveCurrentSession();
-        }
     }
 }
 

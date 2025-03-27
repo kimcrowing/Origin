@@ -105,11 +105,23 @@ class ApiService {
             
             // 重试计数器
             let retries = 0;
-            const maxRetries = 3;
+            const maxRetries = 5; // 增加最大重试次数
             
             // 跟踪处理的token数量（用于大型响应处理）
             let processedTokens = 0;
             const chunkSize = 1000; // 每1000个token一个处理单元
+            
+            // 响应超时检测
+            let lastResponseTime = Date.now();
+            const responseTimeout = 30000; // 30秒超时检测
+            const timeoutCheckInterval = setInterval(() => {
+                const currentTime = Date.now();
+                if (currentTime - lastResponseTime > responseTimeout) {
+                    clearInterval(timeoutCheckInterval);
+                    reader.cancel(); // 取消流读取
+                    onError && onError(new Error('响应超时，可能是网络问题或服务器繁忙'));
+                }
+            }, 5000); // 每5秒检查一次
             
             // 开始读取流
             while (true) {
@@ -121,6 +133,9 @@ class ApiService {
                     value = readResult.value;
                     done = readResult.done;
                     
+                    // 更新最后响应时间
+                    lastResponseTime = Date.now();
+                    
                     // 重置重试计数
                     retries = 0;
                 } catch (error) {
@@ -129,6 +144,7 @@ class ApiService {
                     console.warn(`流读取失败（第${retries}次尝试）:`, error);
                     
                     if (retries > maxRetries) {
+                        clearInterval(timeoutCheckInterval);
                         throw new Error(`流读取失败，已达最大重试次数(${maxRetries}): ${error.message}`);
                     }
                     
@@ -151,6 +167,7 @@ class ApiService {
                     if (line.startsWith('data: ')) {
                         const jsonStr = line.slice(6);
                         if (jsonStr === '[DONE]') {
+                            clearInterval(timeoutCheckInterval);
                             onComplete && onComplete();
                             continue;
                         }
@@ -192,6 +209,9 @@ class ApiService {
                                             // 忽略错误
                                         }
                                     }
+                                    
+                                    // 防止UI阻塞，让渲染线程有机会更新
+                                    await new Promise(resolve => setTimeout(resolve, 0));
                                 }
                             }
                             
@@ -219,6 +239,7 @@ class ApiService {
                 }
             }
             
+            clearInterval(timeoutCheckInterval);
             onComplete && onComplete();
         } catch (error) {
             console.error('流式API调用失败:', error);
