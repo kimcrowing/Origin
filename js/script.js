@@ -1305,19 +1305,43 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 }
             } else {
                 // 标准长度文本渲染
-                messageContent.innerHTML = formatMessage(content);
-                
-                // 重新添加思考区域（如果存在）
-                if (thinkingSection) {
-                    messageContent.appendChild(thinkingSection);
-                }
-                
-                // 添加复制按钮
-                messageContent.appendChild(copyBtn);
-                
-                // 添加进度指示器（如果未完成）
-                if (!isCompleted && progressIndicator) {
-                    messageContent.appendChild(progressIndicator);
+                try {
+                    // 添加调试日志
+                    console.log(`正在渲染标准文本 (${content.length}字符)，formatMessage前`);
+                    
+                    // 格式化内容
+                    const formattedContent = formatMessage(content);
+                    console.log(`formatMessage完成，开始更新DOM`);
+                    
+                    // 更新DOM
+                    messageContent.innerHTML = formattedContent;
+                    
+                    console.log(`DOM更新完成，添加附加元素`);
+                    
+                    // 重新添加思考区域（如果存在）
+                    if (thinkingSection) {
+                        messageContent.appendChild(thinkingSection);
+                    }
+                    
+                    // 添加复制按钮
+                    messageContent.appendChild(copyBtn);
+                    
+                    // 添加进度指示器（如果未完成）
+                    if (!isCompleted && progressIndicator) {
+                        messageContent.appendChild(progressIndicator);
+                    }
+                    
+                    console.log(`渲染完成`);
+                } catch (renderError) {
+                    console.error('标准渲染失败:', renderError);
+                    
+                    // 如果标准渲染失败，使用更简单的方式渲染
+                    messageContent.textContent = content;
+                    
+                    // 重新添加必要元素
+                    if (thinkingSection) messageContent.appendChild(thinkingSection);
+                    messageContent.appendChild(copyBtn);
+                    if (!isCompleted && progressIndicator) messageContent.appendChild(progressIndicator);
                 }
             }
         } catch (error) {
@@ -1452,6 +1476,9 @@ async function streamAIResponse(userMessage, mode, model = null) {
                         const now = Date.now();
                         if (now - lastProgressUpdate > progressUpdateInterval || fullResponse.length % 1000 === 0) {
                             lastProgressUpdate = now;
+                            
+                            // 添加调试输出
+                            console.log(`更新流式内容: ${fullResponse.length}字符，最新内容: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`);
                             
                             // 使用优化的渲染函数
                             renderResponse(fullResponse);
@@ -1596,13 +1623,34 @@ async function streamAIResponse(userMessage, mode, model = null) {
 
 // 格式化消息
 function formatMessage(message) {
-    // 检测是否包含代码块或markdown格式
-    if (message.includes('```') || message.includes('#') || message.includes('*')) {
-        return formatMarkdown(message);
+    try {
+        // 防御检查，确保消息是字符串
+        if (typeof message !== 'string') {
+            console.warn('formatMessage接收到非字符串内容:', message);
+            if (message === null || message === undefined) {
+                return '';
+            }
+            message = String(message);
+        }
+        
+        // 如果消息为空，返回空字符串
+        if (!message || message.trim() === '') {
+            return '';
+        }
+        
+        // 使用更健壮的方式处理Markdown格式
+        try {
+            return formatMarkdown(message);
+        } catch (error) {
+            console.error('Markdown格式化失败，使用纯文本:', error);
+            // 如果Markdown处理失败，至少返回HTML转义的内容
+            return escapeHtml(message).replace(/\n/g, '<br>');
+        }
+    } catch (error) {
+        console.error('formatMessage完全失败:', error);
+        // 极端情况下，尝试返回原始消息
+        return message || '';
     }
-    
-    // 处理普通文本的URL
-    return message.replace(/https?:\/\/[^\s]+/g, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 }
 
 // 格式化Markdown
