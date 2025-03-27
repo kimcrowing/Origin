@@ -1570,6 +1570,44 @@ function addLongTextNavigation(contentElement) {
     
     if (headings.length < 3) return; // 不足3个标题不需要处理
     
+    // 创建目录导航
+    const tocContainer = document.createElement('div');
+    tocContainer.className = 'response-toc';
+    tocContainer.innerHTML = '<div class="toc-title"><i class="fas fa-list"></i> 内容导航</div><ul class="toc-list"></ul>';
+    
+    const tocList = tocContainer.querySelector('.toc-list');
+    
+    // 为每个标题添加ID和添加到目录
+    headings.forEach((heading, index) => {
+        const headingId = `heading-${Date.now()}-${index}`;
+        heading.id = headingId;
+        
+        const headingText = heading.textContent.replace(/折叠\/展开此部分/, '').trim();
+        const headingLevel = parseInt(heading.tagName.substring(1));
+        
+        // 创建目录项
+        const li = document.createElement('li');
+        li.className = `toc-item toc-level-${headingLevel}`;
+        li.innerHTML = `<a href="#${headingId}">${headingText}</a>`;
+        
+        // 添加点击事件，平滑滚动到标题位置
+        li.addEventListener('click', (e) => {
+            e.preventDefault();
+            heading.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+            
+            // 添加高亮效果然后淡出
+            heading.classList.add('highlight-heading');
+            setTimeout(() => {
+                heading.classList.remove('highlight-heading');
+            }, 2000);
+        });
+        
+        tocList.appendChild(li);
+    });
+    
     // 创建折叠控制器
     const sections = [];
     let currentSection = null;
@@ -1600,15 +1638,35 @@ function addLongTextNavigation(contentElement) {
                 // 展开
                 collapseBtn.classList.remove('collapsed');
                 collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                
+                // 添加动画效果
                 sectionContent.forEach(el => {
                     el.style.display = '';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-10px)';
+                    
+                    // 触发动画
+                    setTimeout(() => {
+                        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    }, 10);
                 });
             } else {
                 // 折叠
                 collapseBtn.classList.add('collapsed');
                 collapseBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                
+                // 添加动画效果
                 sectionContent.forEach(el => {
-                    el.style.display = 'none';
+                    el.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-10px)';
+                    
+                    // 等待动画完成后隐藏
+                    setTimeout(() => {
+                        el.style.display = 'none';
+                    }, 200);
                 });
             }
         });
@@ -1625,20 +1683,9 @@ function addLongTextNavigation(contentElement) {
         const controlsContainer = document.createElement('div');
         controlsContainer.className = 'message-section-controls';
         
-        const collapseAllBtn = document.createElement('button');
-        collapseAllBtn.className = 'collapse-all-btn';
-        collapseAllBtn.innerHTML = '折叠全部';
-        collapseAllBtn.addEventListener('click', () => {
-            sections.forEach(section => {
-                if (!section.collapseBtn.classList.contains('collapsed')) {
-                    section.collapseBtn.click();
-                }
-            });
-        });
-        
         const expandAllBtn = document.createElement('button');
         expandAllBtn.className = 'expand-all-btn';
-        expandAllBtn.innerHTML = '展开全部';
+        expandAllBtn.innerHTML = '<i class="fas fa-expand-alt"></i> 展开全部';
         expandAllBtn.addEventListener('click', () => {
             sections.forEach(section => {
                 if (section.collapseBtn.classList.contains('collapsed')) {
@@ -1647,11 +1694,120 @@ function addLongTextNavigation(contentElement) {
             });
         });
         
+        const collapseAllBtn = document.createElement('button');
+        collapseAllBtn.className = 'collapse-all-btn';
+        collapseAllBtn.innerHTML = '<i class="fas fa-compress-alt"></i> 折叠全部';
+        collapseAllBtn.addEventListener('click', () => {
+            sections.forEach(section => {
+                if (!section.collapseBtn.classList.contains('collapsed')) {
+                    section.collapseBtn.click();
+                }
+            });
+        });
+        
+        // 添加悬浮提示
+        expandAllBtn.title = "展开所有内容段落";
+        collapseAllBtn.title = "折叠所有内容段落";
+        
         controlsContainer.appendChild(expandAllBtn);
         controlsContainer.appendChild(collapseAllBtn);
         
+        // 将目录添加到控制容器中
+        const tocWrapper = document.createElement('div');
+        tocWrapper.className = 'toc-wrapper';
+        tocWrapper.appendChild(tocContainer);
+        
         // 添加到消息内容的顶部
         contentElement.insertBefore(controlsContainer, contentElement.firstChild);
+        contentElement.insertBefore(tocWrapper, contentElement.firstChild);
+        
+        // 添加全局样式 - 如果尚未添加
+        if (!document.getElementById('long-text-nav-styles')) {
+            const style = document.createElement('style');
+            style.id = 'long-text-nav-styles';
+            style.textContent = `
+                .highlight-heading {
+                    animation: heading-highlight 2s ease;
+                }
+                
+                @keyframes heading-highlight {
+                    0%, 100% {
+                        background-color: transparent;
+                    }
+                    30% {
+                        background-color: rgba(74, 123, 255, 0.2);
+                    }
+                }
+                
+                .toc-wrapper {
+                    margin-bottom: 15px;
+                }
+                
+                .response-toc {
+                    border-radius: 8px;
+                    border: 1px solid rgba(128, 128, 128, 0.2);
+                    overflow: hidden;
+                    margin-top: 10px;
+                    background-color: rgba(0, 0, 0, 0.02);
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+                }
+                
+                .toc-title {
+                    padding: 10px 15px;
+                    font-weight: 500;
+                    background-color: rgba(74, 123, 255, 0.1);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+                }
+                
+                .toc-list {
+                    padding: 10px 15px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                }
+                
+                .toc-item a {
+                    display: block;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    transition: all 0.2s ease;
+                }
+                
+                .toc-item a:hover {
+                    background-color: rgba(74, 123, 255, 0.1);
+                    transform: translateX(3px);
+                }
+                
+                .message-section-controls {
+                    display: flex;
+                    gap: 10px;
+                    margin-bottom: 12px;
+                }
+                
+                .collapse-all-btn,
+                .expand-all-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background-color: rgba(128, 128, 128, 0.1);
+                    border: none;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                
+                .collapse-all-btn:hover,
+                .expand-all-btn:hover {
+                    background-color: rgba(74, 123, 255, 0.15);
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
 }
 
