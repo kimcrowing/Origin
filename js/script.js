@@ -1209,6 +1209,11 @@ async function streamAIResponse(userMessage, mode, model = null) {
     
     // 生成结构化目录
     const generateTOC = (content) => {
+        // 创建一个新的目录容器元素，而不是复用现有的
+        const newTocContainer = document.createElement('div');
+        newTocContainer.className = 'response-toc';
+        newTocContainer.innerHTML = '<div class="toc-title"><i class="fas fa-list"></i> 内容导航</div><ul class="toc-list"></ul>';
+        
         // 提取标题
         const headings = [];
         const regex = /#{1,6}\s+(.+?)(?:\n|$)/g;
@@ -1217,7 +1222,7 @@ async function streamAIResponse(userMessage, mode, model = null) {
         while ((match = regex.exec(content)) !== null) {
             const headingText = match[1].trim();
             const level = match[0].trim().split(' ')[0].length; // 计算#的数量
-            const id = `heading-${headings.length}`;
+            const id = `heading-${Date.now()}-${headings.length}`;
             
             headings.push({
                 text: headingText,
@@ -1228,36 +1233,29 @@ async function streamAIResponse(userMessage, mode, model = null) {
         
         // 如果有足够的标题，显示目录
         if (headings.length >= 3) {
-            const tocList = tocContainer.querySelector('.toc-list');
-            tocList.innerHTML = '';
+            const tocList = newTocContainer.querySelector('.toc-list');
             
             headings.forEach(heading => {
                 const li = document.createElement('li');
                 li.className = `toc-item toc-level-${heading.level}`;
                 li.innerHTML = `<a href="#${heading.id}">${heading.text}</a>`;
                 
-                li.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    document.getElementById(heading.id).scrollIntoView({
-                        behavior: 'smooth'
-                    });
-                });
-                
                 tocList.appendChild(li);
             });
             
-            // 显示目录
-            tocContainer.style.display = 'block';
-            messageContent.insertBefore(tocContainer, messageContent.firstChild);
+            // 保存目录容器到外部变量，使其可在其他地方使用
+            tocContainer = newTocContainer;
             
-            // 为内容中的标题添加ID
-            let processedContent = content;
+            // 为内容中的标题添加ID，但保留原内容结构
+            let updatedContent = content;
             headings.forEach(heading => {
+                // 只添加ID属性，不改变markdown内容结构
                 const headingRegex = new RegExp(`(#{${heading.level}}\\s+${heading.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?:\\n|$)`, 'g');
-                processedContent = processedContent.replace(headingRegex, `$1 {#${heading.id}}\n`);
+                updatedContent = updatedContent.replace(headingRegex, `$1 {#${heading.id}}\n`);
             });
             
-            return processedContent;
+            // 返回处理后的内容，确保原始内容不会丢失
+            return updatedContent;
         }
         
         return content;
@@ -1320,9 +1318,13 @@ async function streamAIResponse(userMessage, mode, model = null) {
                             formattedContent = generateTOC(formattedContent);
                         }
                         
-                        // 更新消息内容
-                        messageContent.innerHTML = '';
+                        // 确保完整渲染消息内容
                         messageContent.innerHTML = formatMessage(formattedContent);
+                        
+                        // 如果有目录，添加到内容顶部
+                        if (tocContainer && !messageContent.querySelector('.response-toc')) {
+                            messageContent.insertBefore(tocContainer, messageContent.firstChild);
+                        }
                         
                         // 重新添加进度指示器
                         messageContent.appendChild(progressIndicator);
@@ -1363,8 +1365,13 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     finalContent = generateTOC(finalContent);
                 }
                 
-                // 更新最终内容
+                // 确保完整渲染消息内容
                 messageContent.innerHTML = formatMessage(finalContent);
+                
+                // 如果有目录，添加到内容顶部
+                if (tocContainer && !messageContent.querySelector('.response-toc')) {
+                    messageContent.insertBefore(tocContainer, messageContent.firstChild);
+                }
                 
                 // 重新添加思考区域（如果存在）
                 if (thinkingSection) {
