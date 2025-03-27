@@ -1085,4 +1085,173 @@
 /* 完整内容包装器样式 */
 .complete-content-wrapper {
     width: 100%;
+}
+
+/* 恢复通知和简化内容样式 */
+.recovery-note,
+.chunk-recovery-info,
+.raw-recovery-info {
+    background-color: rgba(255, 152, 0, 0.1);
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    color: #ff8f00;
+    border-left: 3px solid #ff9800;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.recovery-note:before,
+.chunk-recovery-info:before,
+.raw-recovery-info:before {
+    content: "\f071";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.recovered-content {
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.01);
+    border-radius: 8px;
+}
+
+.recovered-content h1,
+.recovered-content h2,
+.recovered-content h3,
+.recovered-content h4,
+.recovered-content h5,
+.recovered-content h6 {
+    margin-top: 18px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.recovered-content h1 {
+    font-size: 1.7em;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+    padding-bottom: 8px;
+}
+
+.recovered-content h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    padding-bottom: 6px;
+}
+
+.recovered-content h3 {
+    font-size: 1.3em;
+}
+
+.recovered-content pre {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 12px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-family: monospace;
+    margin: 10px 0;
+}
+
+.recovered-content code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.recovered-content a {
+    color: #4a7bff;
+    text-decoration: none;
+}
+
+.recovered-content a:hover {
+    text-decoration: underline;
+}
+
+.recovered-content strong {
+    font-weight: 600;
+}
+
+.recovered-content em {
+    font-style: italic;
+}
+
+/* 纯块样式 */
+.plain-chunk {
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
+    margin: 5px 0;
+    white-space: pre-wrap;
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* 超小块样式 */
+.content-mini-chunk {
+    position: relative;
+}
+
+.content-mini-chunk:not(:first-child):before {
+    content: '';
+    height: 1px;
+    background: rgba(128, 128, 128, 0.1);
+    width: 100%;
+    display: block;
+    margin: 8px 0;
+}
+
+/* 兼容深色模式的恢复样式 */
+.dark-theme .recovery-note,
+.dark-theme .chunk-recovery-info,
+.dark-theme .raw-recovery-info {
+    background-color: rgba(255, 152, 0, 0.15);
+    color: #ffb74d;
+    border-color: #ffb74d;
+}
+
+.dark-theme .recovered-content {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.dark-theme .plain-chunk {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ddd;
+}
+
+/* 恢复按钮强化样式 */
+.check-complete-btn,
+.show-full-content-btn {
+    background-color: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    animation: attention-pulse 2s infinite;
+}
+
+.check-complete-btn:hover,
+.show-full-content-btn:hover {
+    background-color: rgba(255, 152, 0, 0.25);
+    color: #ff8f00;
+}
+
+@keyframes attention-pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 3px 8px rgba(255, 152, 0, 0.2);
+    }
+}
+
+/* 强调完整内容的按钮位置 */
+.show-full-content-btn {
+    margin: 5px 0 15px 0;
+    z-index: 5;
 } 
