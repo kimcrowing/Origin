@@ -47,6 +47,17 @@ class ApiService {
                 stream: stream
             };
 
+            // 如果是think模式，添加思考过程指令
+            if (model === this.config?.thinkingModel) {
+                requestBody.thinking = true; // 告诉模型我们想要思考过程
+                
+                // 添加思考过程提示词
+                requestBody.messages.unshift({
+                    role: 'system',
+                    content: '当回答复杂问题时，请先展示详细的思考过程，然后再给出最终回答。思考过程将作为辅助信息显示给用户。'
+                });
+            }
+
             // 调用API
             const response = await fetch(this.config.url, {
                 method: 'POST',
@@ -92,9 +103,40 @@ class ApiService {
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
             
+            // 重试计数器
+            let retries = 0;
+            const maxRetries = 3;
+            
+            // 跟踪处理的token数量（用于大型响应处理）
+            let processedTokens = 0;
+            const chunkSize = 1000; // 每1000个token一个处理单元
+            
             // 开始读取流
             while (true) {
-                const { done, value } = await reader.read();
+                let value, done;
+                
+                try {
+                    // 尝试读取流
+                    const readResult = await reader.read();
+                    value = readResult.value;
+                    done = readResult.done;
+                    
+                    // 重置重试计数
+                    retries = 0;
+                } catch (error) {
+                    // 如果读取失败，尝试重试
+                    retries++;
+                    console.warn(`流读取失败（第${retries}次尝试）:`, error);
+                    
+                    if (retries > maxRetries) {
+                        throw new Error(`流读取失败，已达最大重试次数(${maxRetries}): ${error.message}`);
+                    }
+                    
+                    // 延时后重试
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                    continue;
+                }
+                
                 if (done) break;
 
                 // 解码数据
@@ -115,6 +157,45 @@ class ApiService {
                         
                         try {
                             const data = JSON.parse(jsonStr);
+                            
+                            // 处理思考过程
+                            if (data.choices && data.choices[0]) {
+                                const choice = data.choices[0];
+                                
+                                // 检查是否包含思考过程
+                                if (choice.thinking || 
+                                    (choice.delta && choice.delta.thinking)) {
+                                    
+                                    // 构造思考过程的delta对象
+                                    const thinkingData = {...data};
+                                    if (choice.thinking) {
+                                        // 如果直接包含思考过程
+                                        thinkingData.choices[0].delta = {
+                                            thinking: choice.thinking
+                                        };
+                                    }
+                                    
+                                    // 传递思考过程
+                                    onChunk && onChunk(thinkingData);
+                                }
+                                
+                                // 跟踪处理的token数量
+                                processedTokens++;
+                                
+                                // 每处理一定数量的token，执行一次垃圾回收（防止内存泄漏）
+                                if (processedTokens % chunkSize === 0) {
+                                    // 这里只是标记，实际的垃圾回收由浏览器决定
+                                    if (typeof window.gc === 'function') {
+                                        try {
+                                            window.gc();
+                                        } catch (e) {
+                                            // 忽略错误
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 传递常规内容
                             onChunk && onChunk(data);
                         } catch (e) {
                             console.warn('无法解析流式响应:', jsonStr);

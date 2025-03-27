@@ -941,6 +941,11 @@ function handleSubmit(event) {
         }
     }
     
+    // 添加用户消息到UI前禁用提交按钮
+    submitBtn.disabled = true;
+    submitBtn.classList.add('processing');
+    submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+    
     // 添加用户消息到UI
     addMessageToUI(userMessage, 'user');
     
@@ -968,14 +973,111 @@ function handleSubmit(event) {
     
     console.log('当前模式:', mode, '流式响应:', isStreamingMode);
     
-    // 根据模式确定使用流式响应还是普通响应
+    // 更新UI以反映当前模式
+    updateModeIndicator(mode);
+    
+    // 设置一个超时，如果超过一定时间没有回复，显示等待提示
+    const waitTimeout = setTimeout(() => {
+        // 添加等待提示消息
+        const waitingMessage = document.createElement('div');
+        waitingMessage.className = 'waiting-message';
+        waitingMessage.innerHTML = '<i class="fas fa-info-circle"></i> AI正在思考中，请耐心等待...';
+        waitingMessage.id = 'waiting-message';
+        
+        // 将提示添加到思考指示器之后
+        if (currentThinkingIndicator) {
+            const indicator = document.getElementById(currentThinkingIndicator);
+            if (indicator) {
+                indicator.insertAdjacentElement('afterend', waitingMessage);
+                
+                // 添加动画效果
+                setTimeout(() => {
+                    waitingMessage.style.opacity = '1';
+                }, 10);
+            }
+        }
+    }, 5000); // 5秒后显示等待提示
+    
+    // 根据模式和流式选项决定如何处理
     if (isStreamingMode) {
         // 使用流式响应
-        streamAIResponse(userMessage, mode, currentModel);
+        streamAIResponse(userMessage, mode)
+            .finally(() => {
+                // 响应完成后，移除等待提示（如果有）
+                clearTimeout(waitTimeout);
+                const waitingMsg = document.getElementById('waiting-message');
+                if (waitingMsg) {
+                    waitingMsg.style.opacity = '0';
+                    setTimeout(() => waitingMsg.remove(), 300);
+                }
+                
+                // 恢复提交按钮
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('processing');
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            });
     } else {
         // 使用普通响应
-        generateAIResponse(userMessage, mode, currentModel);
+        generateAIResponse(userMessage, mode)
+            .finally(() => {
+                // 响应完成后，移除等待提示（如果有）
+                clearTimeout(waitTimeout);
+                const waitingMsg = document.getElementById('waiting-message');
+                if (waitingMsg) {
+                    waitingMsg.style.opacity = '0';
+                    setTimeout(() => waitingMsg.remove(), 300);
+                }
+                
+                // 恢复提交按钮
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('processing');
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            });
     }
+}
+
+// 更新模式指示器
+function updateModeIndicator(mode) {
+    // 移除现有的模式指示器
+    const existingIndicator = document.querySelector('.mode-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // 创建新的模式指示器
+    const indicator = document.createElement('div');
+    indicator.className = 'mode-indicator';
+    
+    // 根据模式设置不同的样式和文本
+    switch (mode) {
+        case 'deep':
+            indicator.innerHTML = '<i class="fas fa-search-plus"></i> 深度搜索模式';
+            indicator.classList.add('deep-mode');
+            break;
+        case 'think':
+            indicator.innerHTML = '<i class="fas fa-brain"></i> 思考模式';
+            indicator.classList.add('think-mode');
+            break;
+        default:
+            indicator.innerHTML = '<i class="fas fa-comment"></i> 对话模式';
+            indicator.classList.add('chat-mode');
+    }
+    
+    // 添加到文档
+    document.body.appendChild(indicator);
+    
+    // 显示指示器
+    setTimeout(() => {
+        indicator.classList.add('show');
+    }, 10);
+    
+    // 2秒后自动隐藏
+    setTimeout(() => {
+        indicator.classList.remove('show');
+        setTimeout(() => {
+            indicator.remove();
+        }, 300);
+    }, 2000);
 }
 
 // 使用流式响应生成AI回复
@@ -1010,36 +1112,272 @@ async function streamAIResponse(userMessage, mode, model = null) {
     copyBtn.innerHTML = '<i class="fas fa-copy"></i><span class="copy-text">复制</span>';
     copyBtn.title = '复制内容';
     copyBtn.setAttribute('data-action', 'copy');
-    messageContent.appendChild(copyBtn);
+    
+    // 创建进度指示器
+    const progressIndicator = document.createElement('div');
+    progressIndicator.className = 'response-progress';
+    progressIndicator.innerHTML = `
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="progress-status">正在生成回答 (0%)</div>
+    `;
+    messageContent.appendChild(progressIndicator);
     
     // 当前累积的响应文本
     let fullResponse = '';
     
+    // 跟踪响应的各个部分
+    const responseParts = [];
+    
+    // 保存思考过程（如果有）
+    let thinkingProcess = '';
+    let isThinking = mode === 'think';
+    let showingThinking = false;
+    
+    // 创建思考过程显示区域
+    let thinkingSection = null;
+    if (isThinking) {
+        thinkingSection = document.createElement('div');
+        thinkingSection.className = 'thinking-process';
+        thinkingSection.innerHTML = `
+            <div class="thinking-header">
+                <span class="thinking-title">思考过程</span>
+                <button class="thinking-toggle">显示/隐藏</button>
+            </div>
+            <div class="thinking-content" style="display: none;"></div>
+        `;
+        messageContent.appendChild(thinkingSection);
+        
+        // 设置思考过程显示/隐藏切换
+        const toggleBtn = thinkingSection.querySelector('.thinking-toggle');
+        toggleBtn.addEventListener('click', () => {
+            const content = thinkingSection.querySelector('.thinking-content');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggleBtn.textContent = '隐藏';
+            } else {
+                content.style.display = 'none';
+                toggleBtn.textContent = '显示';
+            }
+        });
+    }
+    
+    // 创建结构化导航区域（用于长文本）
+    const tocContainer = document.createElement('div');
+    tocContainer.className = 'response-toc';
+    tocContainer.innerHTML = '<div class="toc-title">内容导航</div><ul class="toc-list"></ul>';
+    tocContainer.style.display = 'none'; // 默认隐藏，当检测到长文本时显示
+    
+    // 自动保存的interval ID
+    let autoSaveInterval = null;
+    
+    // 设置自动保存
+    const setupAutoSave = () => {
+        if (autoSaveInterval) {
+            clearInterval(autoSaveInterval);
+        }
+        
+        // 每5秒自动保存一次进度
+        autoSaveInterval = setInterval(() => {
+            // 保存当前进度到本地存储
+            localStorage.setItem(`response_progress_${messageId}`, JSON.stringify({
+                id: messageId,
+                content: fullResponse,
+                thinking: thinkingProcess,
+                timestamp: Date.now(),
+                completed: false
+            }));
+        }, 5000);
+    };
+    
+    // 更新进度条
+    const updateProgress = (percent) => {
+        const progressFill = progressIndicator.querySelector('.progress-fill');
+        const progressStatus = progressIndicator.querySelector('.progress-status');
+        
+        if (progressFill && progressStatus) {
+            progressFill.style.width = `${percent}%`;
+            progressStatus.textContent = `正在生成回答 (${Math.round(percent)}%)`;
+        }
+    };
+    
+    // 每接收到约100个token更新一次进度
+    // 假设平均回复约1000 tokens
+    const progressUpdateInterval = 100;
+    let lastProgressUpdate = 0;
+    
+    // 生成结构化目录
+    const generateTOC = (content) => {
+        // 提取标题
+        const headings = [];
+        const regex = /#{1,6}\s+(.+?)(?:\n|$)/g;
+        let match;
+        
+        while ((match = regex.exec(content)) !== null) {
+            const headingText = match[1].trim();
+            const level = match[0].trim().split(' ')[0].length; // 计算#的数量
+            const id = `heading-${headings.length}`;
+            
+            headings.push({
+                text: headingText,
+                level,
+                id
+            });
+        }
+        
+        // 如果有足够的标题，显示目录
+        if (headings.length >= 3) {
+            const tocList = tocContainer.querySelector('.toc-list');
+            tocList.innerHTML = '';
+            
+            headings.forEach(heading => {
+                const li = document.createElement('li');
+                li.className = `toc-item toc-level-${heading.level}`;
+                li.innerHTML = `<a href="#${heading.id}">${heading.text}</a>`;
+                
+                li.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById(heading.id).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+                
+                tocList.appendChild(li);
+            });
+            
+            // 显示目录
+            tocContainer.style.display = 'block';
+            messageContent.insertBefore(tocContainer, messageContent.firstChild);
+            
+            // 为内容中的标题添加ID
+            let processedContent = content;
+            headings.forEach(heading => {
+                const headingRegex = new RegExp(`(#{${heading.level}}\\s+${heading.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?:\\n|$)`, 'g');
+                processedContent = processedContent.replace(headingRegex, `$1 {#${heading.id}}\n`);
+            });
+            
+            return processedContent;
+        }
+        
+        return content;
+    };
+    
     try {
+        // 启动自动保存
+        setupAutoSave();
+        
         // 使用指定的模型
         await apiService.streamChatCompletion(
             userMessage,
             // 处理每个响应片段
             (chunk) => {
-                if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
-                    const content = chunk.choices[0].delta.content;
-                    fullResponse += content;
+                if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta) {
+                    const delta = chunk.choices[0].delta;
                     
-                    // 更新消息内容
-                    messageContent.innerHTML = formatMessage(fullResponse);
-                    
-                    // 确保复制按钮存在
-                    if (!messageContent.querySelector('.copy-btn')) {
-                        messageContent.appendChild(copyBtn);
+                    // 检查是否包含思考过程
+                    if (isThinking && delta.thinking) {
+                        thinkingProcess += delta.thinking;
+                        
+                        // 更新思考过程显示
+                        if (thinkingSection) {
+                            const thinkingContent = thinkingSection.querySelector('.thinking-content');
+                            thinkingContent.innerHTML = formatMessage(thinkingProcess);
+                            
+                            if (!showingThinking) {
+                                // 首次收到思考内容时显示思考区域
+                                thinkingSection.style.display = 'block';
+                                showingThinking = true;
+                            }
+                        }
                     }
                     
-                    // 滚动到底部
-                    scrollToBottom();
+                    // 处理内容更新
+                    if (delta.content) {
+                        const content = delta.content;
+                        fullResponse += content;
+                        
+                        // 将内容分段，以便更好地处理大型响应
+                        const currentLength = fullResponse.length;
+                        const chunkSize = Math.floor(currentLength / progressUpdateInterval);
+                        
+                        // 更新进度
+                        if (chunkSize > lastProgressUpdate) {
+                            lastProgressUpdate = chunkSize;
+                            // 假设平均回复长度约10000字符
+                            const estimatedProgress = Math.min(95, (currentLength / 10000) * 100);
+                            updateProgress(estimatedProgress);
+                        }
+                        
+                        // 处理流式响应的分段显示
+                        responseParts.push(content);
+                        
+                        // 应用格式化并更新显示
+                        let formattedContent = fullResponse;
+                        
+                        // 如果内容足够长，生成目录
+                        if (currentLength > 1000) { // 假设1000字符以上需要目录
+                            formattedContent = generateTOC(formattedContent);
+                        }
+                        
+                        // 更新消息内容
+                        messageContent.innerHTML = '';
+                        messageContent.innerHTML = formatMessage(formattedContent);
+                        
+                        // 重新添加进度指示器
+                        messageContent.appendChild(progressIndicator);
+                        
+                        // 重新添加思考区域（如果存在）
+                        if (thinkingSection) {
+                            messageContent.appendChild(thinkingSection);
+                        }
+                        
+                        // 添加复制按钮
+                        messageContent.appendChild(copyBtn);
+                        
+                        // 滚动到底部
+                        scrollToBottom();
+                    }
                 }
             },
             // 流式响应完成的回调
             () => {
                 console.log('流式响应完成，消息ID:', messageId);
+                
+                // 清除自动保存
+                if (autoSaveInterval) {
+                    clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+                }
+                
+                // 移除进度指示器
+                if (progressIndicator.parentNode) {
+                    progressIndicator.parentNode.removeChild(progressIndicator);
+                }
+                
+                // 最终更新
+                let finalContent = fullResponse;
+                
+                // 生成最终目录
+                if (fullResponse.length > 1000) {
+                    finalContent = generateTOC(finalContent);
+                }
+                
+                // 更新最终内容
+                messageContent.innerHTML = formatMessage(finalContent);
+                
+                // 重新添加思考区域（如果存在）
+                if (thinkingSection) {
+                    messageContent.appendChild(thinkingSection);
+                }
+                
+                // 添加复制按钮
+                messageContent.appendChild(copyBtn);
+                
+                // 添加长文本导航和折叠功能
+                if (fullResponse.length > 3000) { // 超过3000字符的文本添加折叠功能
+                    addLongTextNavigation(messageContent);
+                }
                 
                 // 确保历史记录中不重复添加相同的消息
                 const existingMessage = chatHistory.find(msg => msg.id === messageId);
@@ -1049,38 +1387,78 @@ async function streamAIResponse(userMessage, mode, model = null) {
                         id: messageId,
                         sender: 'ai',
                         content: fullResponse,
+                        thinking: thinkingProcess,
                         timestamp: Date.now()
                     });
                     
                     // 保存当前会话
                     saveCurrentSession();
+                    
+                    // 删除临时进度存储
+                    localStorage.removeItem(`response_progress_${messageId}`);
                 }
+                
+                // 将完成的消息标记为已完成
+                localStorage.setItem(`response_progress_${messageId}`, JSON.stringify({
+                    id: messageId,
+                    content: fullResponse,
+                    thinking: thinkingProcess,
+                    timestamp: Date.now(),
+                    completed: true
+                }));
             },
             // 错误处理
             (error) => {
                 console.error('流式响应出错:', error);
                 
-                // 添加错误消息
-                messageContent.innerHTML += `<p class="error-message">错误: ${error.message}</p>`;
-                
-                // 确保复制按钮存在
-                if (!messageContent.querySelector('.copy-btn')) {
-                    messageContent.appendChild(copyBtn);
+                // 清除自动保存
+                if (autoSaveInterval) {
+                    clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
                 }
+                
+                // 移除进度指示器
+                if (progressIndicator.parentNode) {
+                    progressIndicator.parentNode.removeChild(progressIndicator);
+                }
+                
+                // 添加错误消息，但保留已生成的内容
+                if (fullResponse) {
+                    messageContent.innerHTML = formatMessage(fullResponse);
+                    messageContent.innerHTML += `<p class="error-message">错误: ${error.message}</p>`;
+                    messageContent.innerHTML += `<p class="error-recovery">已保存已生成的内容，您可以刷新页面后重试。</p>`;
+                } else {
+                    messageContent.innerHTML = `<p class="error-message">错误: ${error.message}</p>`;
+                }
+                
+                // 添加复制按钮
+                messageContent.appendChild(copyBtn);
                 
                 // 确保历史记录中不重复添加相同的消息
                 const existingMessage = chatHistory.find(msg => msg.id === messageId);
-                if (!existingMessage) {
-                    // 添加消息到历史记录
+                if (!existingMessage && fullResponse) {
+                    // 添加消息到历史记录，即使不完整
                     chatHistory.push({
                         id: messageId,
                         sender: 'ai',
-                        content: messageContent.innerHTML,
-                        timestamp: Date.now()
+                        content: fullResponse,
+                        thinking: thinkingProcess,
+                        timestamp: Date.now(),
+                        error: error.message
                     });
                     
                     // 保存当前会话
                     saveCurrentSession();
+                    
+                    // 保存错误状态
+                    localStorage.setItem(`response_progress_${messageId}`, JSON.stringify({
+                        id: messageId,
+                        content: fullResponse,
+                        thinking: thinkingProcess,
+                        timestamp: Date.now(),
+                        error: error.message,
+                        completed: false
+                    }));
                 }
             },
             model  // 添加模型参数
@@ -1088,28 +1466,140 @@ async function streamAIResponse(userMessage, mode, model = null) {
     } catch (error) {
         console.error('处理流式响应时出错:', error);
         
+        // 清除自动保存
+        if (autoSaveInterval) {
+            clearInterval(autoSaveInterval);
+            autoSaveInterval = null;
+        }
+        
         // 添加错误消息
+        messageContent.innerHTML = fullResponse ? formatMessage(fullResponse) : '';
         messageContent.innerHTML += `<p class="error-message">抱歉，处理响应时出现问题: ${error.message}</p>`;
         
+        // 添加重试按钮
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'retry-btn';
+        retryBtn.innerHTML = '<i class="fas fa-redo"></i> 重试';
+        retryBtn.addEventListener('click', () => {
+            // 移除当前消息
+            messageWrapper.remove();
+            
+            // 重新尝试
+            streamAIResponse(userMessage, mode, model);
+        });
+        messageContent.appendChild(retryBtn);
+        
         // 确保复制按钮存在
-        if (!messageContent.querySelector('.copy-btn')) {
-            messageContent.appendChild(copyBtn);
-        }
+        messageContent.appendChild(copyBtn);
         
         // 确保历史记录中不重复添加相同的消息
         const existingMessage = chatHistory.find(msg => msg.id === messageId);
-        if (!existingMessage) {
+        if (!existingMessage && fullResponse) {
             // 添加消息到历史记录
             chatHistory.push({
                 id: messageId,
                 sender: 'ai',
-                content: messageContent.innerHTML,
-                timestamp: Date.now()
+                content: fullResponse,
+                thinking: thinkingProcess,
+                timestamp: Date.now(),
+                error: error.message
             });
             
             // 保存当前会话
             saveCurrentSession();
         }
+    }
+}
+
+// 为长文本添加导航和折叠功能
+function addLongTextNavigation(contentElement) {
+    // 查找所有标题
+    const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    
+    if (headings.length < 3) return; // 不足3个标题不需要处理
+    
+    // 创建折叠控制器
+    const sections = [];
+    let currentSection = null;
+    
+    // 遍历内容，为每个部分添加折叠功能
+    Array.from(headings).forEach((heading, index) => {
+        // 创建折叠控制按钮
+        const collapseBtn = document.createElement('button');
+        collapseBtn.className = 'collapse-section-btn';
+        collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        collapseBtn.title = '折叠/展开此部分';
+        heading.appendChild(collapseBtn);
+        
+        // 获取当前标题到下一个标题之间的所有内容
+        let sectionContent = [];
+        let nextElement = heading.nextElementSibling;
+        
+        while (nextElement && !['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(nextElement.tagName)) {
+            sectionContent.push(nextElement);
+            nextElement = nextElement.nextElementSibling;
+        }
+        
+        // 添加折叠事件处理
+        collapseBtn.addEventListener('click', () => {
+            const isCollapsed = collapseBtn.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                // 展开
+                collapseBtn.classList.remove('collapsed');
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                sectionContent.forEach(el => {
+                    el.style.display = '';
+                });
+            } else {
+                // 折叠
+                collapseBtn.classList.add('collapsed');
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                sectionContent.forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+        });
+        
+        sections.push({
+            heading,
+            content: sectionContent,
+            collapseBtn
+        });
+    });
+    
+    // 添加全部折叠/展开按钮
+    if (sections.length > 0) {
+        const controlsContainer = document.createElement('div');
+        controlsContainer.className = 'message-section-controls';
+        
+        const collapseAllBtn = document.createElement('button');
+        collapseAllBtn.className = 'collapse-all-btn';
+        collapseAllBtn.innerHTML = '折叠全部';
+        collapseAllBtn.addEventListener('click', () => {
+            sections.forEach(section => {
+                if (!section.collapseBtn.classList.contains('collapsed')) {
+                    section.collapseBtn.click();
+                }
+            });
+        });
+        
+        const expandAllBtn = document.createElement('button');
+        expandAllBtn.className = 'expand-all-btn';
+        expandAllBtn.innerHTML = '展开全部';
+        expandAllBtn.addEventListener('click', () => {
+            sections.forEach(section => {
+                if (section.collapseBtn.classList.contains('collapsed')) {
+                    section.collapseBtn.click();
+                }
+            });
+        });
+        
+        controlsContainer.appendChild(expandAllBtn);
+        controlsContainer.appendChild(collapseAllBtn);
+        
+        // 添加到消息内容的顶部
+        contentElement.insertBefore(controlsContainer, contentElement.firstChild);
     }
 }
 
@@ -1175,7 +1665,7 @@ function formatMarkdown(markdown) {
         } else {
             // 如果之前有表格，现在结束了
             if (tableStarted) {
-                // 处理表格
+    // 处理表格
                 const tableHtml = processTable(tableRows, tableHasHeader);
                 processedLines.push(tableHtml);
                 
@@ -1381,15 +1871,15 @@ function processParagraphs(lines) {
         if (isEmptyLine) {
             if (inParagraph) {
                 result[result.length - 1] += '</p>';
-                inParagraph = false;
-            }
+    inParagraph = false;
+        }
             result.push('');
             continue;
-        }
+    }
         
         // 如果是HTML标签开始，直接添加
         if (startsWithHtml) {
-            if (inParagraph) {
+    if (inParagraph) {
                 result[result.length - 1] += '</p>';
                 inParagraph = false;
             }
@@ -2818,7 +3308,16 @@ function showThinkingIndicator() {
         currentThinkingIndicator = indicatorId;
         
         // 添加到消息容器
+        thinkingMessage.style.opacity = '0';
+        thinkingMessage.style.transform = 'translateY(10px)';
         messagesContainer.appendChild(thinkingElement);
+        
+        // 触发重绘以应用过渡
+        setTimeout(() => {
+            thinkingMessage.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            thinkingMessage.style.opacity = '1';
+            thinkingMessage.style.transform = 'translateY(0)';
+        }, 10);
         
         // 滚动到底部
         scrollToBottom();
@@ -2837,7 +3336,15 @@ function removeThinkingIndicator() {
     if (currentThinkingIndicator) {
         const indicator = document.getElementById(currentThinkingIndicator);
         if (indicator) {
-            indicator.remove();
+            // 添加淡出效果
+            indicator.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+            indicator.style.opacity = '0';
+            indicator.style.transform = 'translateY(-10px)';
+            
+            // 等待动画完成后移除元素
+            setTimeout(() => {
+                indicator.remove();
+            }, 200);
         }
         currentThinkingIndicator = null;
     }
@@ -2845,7 +3352,15 @@ function removeThinkingIndicator() {
     // 移除所有其他可能的思考指示器
     const allIndicators = messagesContainer.querySelectorAll('.thinking-indicator');
     allIndicators.forEach(indicator => {
-        indicator.remove();
+        // 添加淡出效果
+        indicator.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        indicator.style.opacity = '0';
+        indicator.style.transform = 'translateY(-10px)';
+        
+        // 等待动画完成后移除元素
+        setTimeout(() => {
+            indicator.remove();
+        }, 200);
     });
 }
 
