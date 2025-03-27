@@ -166,7 +166,11 @@ class ThinkModeService {
           <div class="think-result-header">
             <h4>分析进行中...</h4>
             <div class="think-progress">
-              <div class="think-progress-bar"></div>
+              <div class="think-progress-animation">
+                <div class="think-dot"></div>
+                <div class="think-dot"></div>
+                <div class="think-dot"></div>
+              </div>
             </div>
           </div>
           ${showProcess ? `
@@ -193,7 +197,7 @@ class ThinkModeService {
       const resultContent = resultArea.querySelector('.think-result-content');
       const processContent = resultArea.querySelector('.think-process-content');
       const resultHeader = resultArea.querySelector('.think-result-header h4');
-      const progressBar = resultArea.querySelector('.think-progress-bar');
+      const progressAnimation = resultArea.querySelector('.think-progress-animation');
       const actionsContainer = resultArea.querySelector('.think-result-actions');
       
       // 如果有思考过程切换按钮，设置事件
@@ -243,13 +247,6 @@ class ThinkModeService {
               
               // 自动滚动到底部
               resultContent.scrollTop = resultContent.scrollHeight;
-              
-              // 更新进度条
-              if (progressBar) {
-                // 假设平均回复约1000字符
-                const progress = Math.min(90, (finalResult.length / 1000) * 100);
-                progressBar.style.width = `${progress}%`;
-              }
             }
           }
         },
@@ -257,14 +254,15 @@ class ThinkModeService {
         () => {
           isCompleted = true;
           
-          // 更新标题和进度条
+          // 更新标题
           if (resultHeader) {
             resultHeader.textContent = '分析完成';
           }
           
-          if (progressBar) {
-            progressBar.style.width = '100%';
-            progressBar.style.backgroundColor = '#4CAF50';
+          // 移除动画
+          if (progressAnimation) {
+            // 替换为完成图标
+            progressAnimation.innerHTML = '<i class="fas fa-check-circle" style="color: #4CAF50; font-size: 16px;"></i>';
           }
           
           // 显示操作按钮
@@ -331,9 +329,9 @@ class ThinkModeService {
             resultHeader.textContent = '分析出错';
           }
           
-          if (progressBar) {
-            progressBar.style.width = '100%';
-            progressBar.style.backgroundColor = '#f44336';
+          // 更新动画为错误状态
+          if (progressAnimation) {
+            progressAnimation.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #f44336; font-size: 16px;"></i>';
           }
           
           // 显示错误消息

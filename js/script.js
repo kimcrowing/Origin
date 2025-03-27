@@ -1191,14 +1191,66 @@ async function streamAIResponse(userMessage, mode, model = null) {
         }, 5000);
     };
     
-    // 更新进度条
+    // 更新进度样式
     const updateProgress = (percent) => {
-        const progressFill = progressIndicator.querySelector('.progress-fill');
+        const progressContainer = progressIndicator.querySelector('.progress-bar');
         const progressStatus = progressIndicator.querySelector('.progress-status');
         
-        if (progressFill && progressStatus) {
-            progressFill.style.width = `${percent}%`;
-            progressStatus.textContent = `正在生成回答 (${Math.round(percent)}%)`;
+        if (progressContainer && progressStatus) {
+            // 第一次调用时，将静态进度条替换为动态动画
+            if (!progressContainer.querySelector('.animation-dots')) {
+                // 创建动态动画元素
+                progressContainer.innerHTML = `
+                    <div class="animation-dots">
+                        <span class="anim-dot"></span>
+                        <span class="anim-dot"></span>
+                        <span class="anim-dot"></span>
+                    </div>
+                `;
+                
+                // 添加动画样式（如果尚未在CSS中定义）
+                if (!document.getElementById('dynamic-animation-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'dynamic-animation-style';
+                    style.textContent = `
+                        .animation-dots {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                            padding: 5px 0;
+                        }
+                        .anim-dot {
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 50%;
+                            background-color: #4a7bff;
+                            animation: anim-dot-pulse 1.4s infinite ease-in-out;
+                        }
+                        .anim-dot:nth-child(1) {
+                            animation-delay: -0.32s;
+                        }
+                        .anim-dot:nth-child(2) {
+                            animation-delay: -0.16s;
+                        }
+                        @keyframes anim-dot-pulse {
+                            0%, 80%, 100% { 
+                                transform: scale(0.6);
+                                opacity: 0.6;
+                            }
+                            40% { 
+                                transform: scale(1.2);
+                                opacity: 1;
+                                box-shadow: 0 0 10px rgba(74, 123, 255, 0.6);
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+            
+            // 更新状态文本 - 移除百分比
+            progressStatus.textContent = '正在生成回答...';
         }
     };
     

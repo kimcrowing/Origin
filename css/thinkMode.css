@@ -230,23 +230,66 @@
 .think-progress {
   flex: 1;
   height: 6px;
-  background-color: #eee;
+  background-color: transparent;
   border-radius: 3px;
   margin-left: 15px;
   overflow: hidden;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.think-progress::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
+/* 新的动态动画样式 */
+.think-progress-animation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.think-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4a7bff;
+  animation: think-dot-bounce 1.4s infinite ease-in-out;
+}
+
+.think-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.think-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes think-dot-bounce {
+  0%, 80%, 100% { 
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  40% { 
+    transform: scale(1.2);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(74, 123, 255, 0.6);
+  }
+}
+
+/* 移除原有的进度条样式 */
+.think-progress-bar {
+  display: none;
+  /* 原来的样式被注释掉
   height: 100%;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.7), transparent);
-  animation: progress-shine 2s infinite;
-  z-index: 1;
+  width: 0%;
+  background-color: #4a7bff;
+  background-image: linear-gradient(to right, #4a7bff, #5a8bff);
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 3px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 3px rgba(74, 123, 255, 0.5); 
+  */
 }
 
 @keyframes progress-shine {
@@ -256,18 +299,6 @@
   100% {
     transform: translateX(400%);
   }
-}
-
-.think-progress-bar {
-  height: 100%;
-  width: 0%;
-  background-color: #4a7bff;
-  background-image: linear-gradient(to right, #4a7bff, #5a8bff);
-  transition: width 0.3s ease, background-color 0.3s ease;
-  border-radius: 3px;
-  position: relative;
-  z-index: 2;
-  box-shadow: 0 0 3px rgba(74, 123, 255, 0.5);
 }
 
 .think-result-content {
