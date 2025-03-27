@@ -1621,6 +1621,15 @@ function formatMarkdown(markdown) {
         return placeholder;
     });
     
+    // 先处理Markdown标题，防止被后续段落处理包含
+    const headings = [];
+    markdown = markdown.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, text) => {
+        const level = hashes.length;
+        const placeholder = `__HEADING_${headings.length}__`;
+        headings.push(`<h${level}>${text.trim()}</h${level}>`);
+        return placeholder;
+    });
+    
     // 处理表格 - 改进表格处理逻辑
     const tableRows = [];
     let tableStarted = false;
@@ -1651,7 +1660,7 @@ function formatMarkdown(markdown) {
         } else {
             // 如果之前有表格，现在结束了
             if (tableStarted) {
-    // 处理表格
+                // 处理表格
                 const tableHtml = processTable(tableRows, tableHasHeader);
                 processedLines.push(tableHtml);
                 
@@ -1687,13 +1696,6 @@ function formatMarkdown(markdown) {
     // 处理水平线
     markdown = markdown.replace(/^(\*{3,}|-{3,})$/gm, '<hr>');
     
-    // 处理标题
-    markdown = markdown.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    markdown = markdown.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    markdown = markdown.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-    markdown = markdown.replace(/^#### (.*$)/gm, '<h4>$1</h4>');
-    markdown = markdown.replace(/^##### (.*$)/gm, '<h5>$1</h5>');
-    
     // 处理任务列表
     markdown = markdown.replace(/^- \[ \] (.*$)/gm, '<div class="task-list-item"><input type="checkbox" disabled> $1</div>');
     markdown = markdown.replace(/^- \[x\] (.*$)/gmi, '<div class="task-list-item"><input type="checkbox" checked disabled> $1</div>');
@@ -1715,6 +1717,11 @@ function formatMarkdown(markdown) {
     const processedParagraphs = processParagraphs(paragraphLines);
     
     markdown = processedParagraphs;
+    
+    // 恢复标题
+    headings.forEach((heading, index) => {
+        markdown = markdown.replace(`__HEADING_${index}__`, heading);
+    });
     
     // 恢复行内代码
     inlineCodes.forEach((code, index) => {
@@ -1785,7 +1792,8 @@ function processLists(markdown) {
             indent,
             isOrderedList,
             content,
-            index: match.index
+            index: match.index,
+            endIndex: match.index + match[0].length
         });
     }
     
@@ -1801,23 +1809,28 @@ function processLists(markdown) {
     for (let i = 0; i < listMatches.length; i++) {
         const item = listMatches[i];
         
+        // 检查是否有新行分隔
+        const hasNewLineSeparation = i > 0 && 
+            markdown.substring(listMatches[i-1].endIndex, item.index).split('\n').length > 2;
+        
         // 开始新组或添加到现有组
         if (currentGroup === null || 
             currentGroup.indent !== item.indent || 
             currentGroup.isOrderedList !== item.isOrderedList ||
-            currentGroup.endIndex + 1 < item.index) {
+            hasNewLineSeparation ||
+            item.index > currentGroup.endIndex + 10) { // 允许最多10个字符的间隔，更灵活地处理列表项之间的空白
             
             currentGroup = {
                 items: [item],
                 indent: item.indent,
                 isOrderedList: item.isOrderedList,
                 startIndex: item.index,
-                endIndex: item.index + item.fullMatch.length
+                endIndex: item.endIndex
             };
             listGroups.push(currentGroup);
         } else {
             currentGroup.items.push(item);
-            currentGroup.endIndex = item.index + item.fullMatch.length;
+            currentGroup.endIndex = item.endIndex;
         }
     }
     
@@ -1828,8 +1841,15 @@ function processLists(markdown) {
     for (const group of listGroups) {
         // 构建HTML
         const listTag = group.isOrderedList ? 'ol' : 'ul';
-        const listItems = group.items.map(item => `<li>${item.content}</li>`).join('');
-        const listHtml = `<${listTag}>${listItems}</${listTag}>`;
+        const listItems = group.items.map(item => {
+            // 处理列表项内可能的HTML标记
+            let content = item.content;
+            // 移除列表项内可能存在的<p>标签，这些应该由列表元素本身处理
+            content = content.replace(/<\/?p>/g, '');
+            return `<li>${content}</li>`;
+        }).join('');
+        
+        const listHtml = `<${listTag} class="md-list">${listItems}</${listTag}>`;
         
         // 原始文本范围
         const startPos = group.startIndex + offset;
@@ -1852,31 +1872,46 @@ function processParagraphs(lines) {
     
     const result = [];
     let paragraphContent = '';
+    let consecutiveEmptyLines = 0;
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         
-        // 判断是否为HTML元素或空行
+        // 判断是否为HTML元素、特殊占位符或空行
         const isHTML = line.startsWith('<') && !line.startsWith('<p>');
+        const isPlaceholder = line.includes('__HEADING_') || 
+                             line.includes('__CODE_BLOCK_') ||
+                             line.includes('__INLINE_CODE_');
         const isEmpty = line === '';
         
-        // 如果当前有段落内容且遇到HTML或空行，关闭段落
-        if (paragraphContent && (isHTML || isEmpty)) {
+        // 如果当前有段落内容且遇到HTML、占位符或空行，关闭段落
+        if (paragraphContent && (isHTML || isPlaceholder || isEmpty)) {
             result.push(`<p>${paragraphContent}</p>`);
             paragraphContent = '';
         }
         
-        // 处理HTML或空行
-        if (isHTML) {
+        // 处理HTML元素、占位符或空行
+        if (isHTML || isPlaceholder) {
             result.push(line);
+            consecutiveEmptyLines = 0;
         } else if (isEmpty) {
-            result.push('');
-        } else if (!paragraphContent) {
-            // 开始新段落
-            paragraphContent = line;
+            // 只在连续空行数小于2时添加空行，减少过多的空行
+            if (consecutiveEmptyLines < 1) {
+                result.push('');
+            }
+            consecutiveEmptyLines++;
         } else {
-            // 添加到现有段落
-            paragraphContent += ' ' + line;
+            // 普通文本内容
+            consecutiveEmptyLines = 0;
+            
+            if (!paragraphContent) {
+                // 开始新段落
+                paragraphContent = line;
+            } else {
+                // 添加到现有段落，保留自然换行
+                const needsSpace = !paragraphContent.endsWith(' ') && !line.startsWith(' ');
+                paragraphContent += needsSpace ? ' ' + line : line;
+            }
         }
     }
     
@@ -1885,8 +1920,8 @@ function processParagraphs(lines) {
         result.push(`<p>${paragraphContent}</p>`);
     }
     
-    // 减少空行
-    return result.filter(line => line !== '' || Math.random() < 0.5).join('\n');
+    // 返回处理后的HTML，移除多余的空行
+    return result.filter(line => line !== '' || Math.random() < 0.3).join('\n');
 }
 
 // 转义HTML特殊字符

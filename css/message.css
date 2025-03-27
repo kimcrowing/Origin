@@ -116,8 +116,27 @@
 
 /* 段落样式 */
 .message-content p {
-    margin: 12px 0;
+    margin: 10px 0;
     line-height: 1.6;
+}
+
+.message-content p + p {
+    margin-top: 8px;  /* 相邻段落间距减小 */
+}
+
+.message-content h1 + p,
+.message-content h2 + p,
+.message-content h3 + p,
+.message-content h4 + p,
+.message-content h5 + p {
+    margin-top: 6px;  /* 标题下方段落间距更小 */
+}
+
+.message-content hr {
+    margin: 12px 0;
+    border: none;
+    height: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* 标题样式 */
@@ -126,10 +145,16 @@
 .message-content h3,
 .message-content h4,
 .message-content h5 {
-    margin-top: 20px;
-    margin-bottom: 12px;
+    margin-top: 18px;
+    margin-bottom: 10px;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.3;
+}
+
+.message-content h1:first-child,
+.message-content h2:first-child,
+.message-content h3:first-child {
+    margin-top: 0;
 }
 
 .message-content h1 {
@@ -204,6 +229,51 @@
     list-style-type: decimal;
 }
 
+/* Markdown增强列表样式 */
+.message-content .md-list {
+    margin: 8px 0 8px 20px;
+    padding-left: 15px;
+}
+
+.message-content .md-list li {
+    margin: 3px 0;
+    line-height: 1.5;
+    display: list-item;
+}
+
+/* 优化段落间距 */
+.message-content p {
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
+.message-content p + p {
+    margin-top: 8px;  /* 相邻段落间距减小 */
+}
+
+.message-content h1 + p,
+.message-content h2 + p,
+.message-content h3 + p,
+.message-content h4 + p,
+.message-content h5 + p {
+    margin-top: 6px;  /* 标题下方段落间距更小 */
+}
+
+.message-content hr {
+    margin: 12px 0;
+    border: none;
+    height: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 防止列表和代码块的换行问题 */
+.message-content pre,
+.message-content ul,
+.message-content ol {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* 代码块样式 */
 .message-content pre {
     background-color: rgba(0, 0, 0, 0.2);
@@ -262,14 +332,6 @@
     background-color: rgba(128, 128, 128, 0.08);
     color: var(--text-color);
     border-radius: 0 6px 6px 0;
-}
-
-/* 水平线样式 */
-.message-content hr {
-    border: none;
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 20px 0;
 }
 
 /* 复制按钮 */
