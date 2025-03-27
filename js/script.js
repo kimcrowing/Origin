@@ -1768,76 +1768,79 @@ function processTable(tableRows, hasHeader) {
 
 // 处理列表的辅助函数
 function processLists(markdown) {
-    // 处理无序列表
-    const ulRegex = /^(\s*)[\*\-•]\s+(.*?)$/gm;
+    // 识别有序列表和无序列表的模式
+    const listPattern = /^(\s*)([-*•]|\d+\.)\s+(.+)$/gm;
     let match;
-    let ulMatches = [];
+    const listMatches = [];
     
-    while ((match = ulRegex.exec(markdown)) !== null) {
-        ulMatches.push({
+    // 收集所有列表项
+    while ((match = listPattern.exec(markdown)) !== null) {
+        const indent = match[1].length;
+        const marker = match[2];
+        const content = match[3];
+        const isOrderedList = /^\d+\./.test(marker);
+        
+        listMatches.push({
             fullMatch: match[0],
-            indent: match[1].length,
-            content: match[2],
+            indent,
+            isOrderedList,
+            content,
             index: match.index
         });
     }
     
-    // 处理有序列表
-    const olRegex = /^(\s*)(\d+)\.\s+(.*?)$/gm;
-    let olMatches = [];
+    if (listMatches.length === 0) return markdown;
     
-    while ((match = olRegex.exec(markdown)) !== null) {
-        olMatches.push({
-            fullMatch: match[0],
-            indent: match[1].length,
-            number: match[2],
-            content: match[3],
-            index: match.index
-        });
+    // 按位置排序
+    listMatches.sort((a, b) => a.index - b.index);
+    
+    // 查找连续的列表组
+    const listGroups = [];
+    let currentGroup = null;
+    
+    for (let i = 0; i < listMatches.length; i++) {
+        const item = listMatches[i];
+        
+        // 开始新组或添加到现有组
+        if (currentGroup === null || 
+            currentGroup.indent !== item.indent || 
+            currentGroup.isOrderedList !== item.isOrderedList ||
+            currentGroup.endIndex + 1 < item.index) {
+            
+            currentGroup = {
+                items: [item],
+                indent: item.indent,
+                isOrderedList: item.isOrderedList,
+                startIndex: item.index,
+                endIndex: item.index + item.fullMatch.length
+            };
+            listGroups.push(currentGroup);
+        } else {
+            currentGroup.items.push(item);
+            currentGroup.endIndex = item.index + item.fullMatch.length;
+        }
     }
     
-    // 合并并按索引排序
-    const allMatches = [...ulMatches, ...olMatches].sort((a, b) => a.index - b.index);
-    
-    if (allMatches.length === 0) return markdown;
-    
-    // 替换列表
+    // 替换列表组
     let result = markdown;
     let offset = 0;
     
-    for (let i = 0; i < allMatches.length; i++) {
-        const current = allMatches[i];
-        const isUl = 'number' in current === false;
+    for (const group of listGroups) {
+        // 构建HTML
+        const listTag = group.isOrderedList ? 'ol' : 'ul';
+        const listItems = group.items.map(item => `<li>${item.content}</li>`).join('');
+        const listHtml = `<${listTag}>${listItems}</${listTag}>`;
         
-        // 找出当前层级的所有连续列表项
-        let j = i;
-        const listItems = [];
+        // 原始文本范围
+        const startPos = group.startIndex + offset;
+        const endPos = group.endIndex + offset;
+        const originalText = result.substring(startPos, endPos);
         
-        while (j < allMatches.length && 
-               ((isUl && !('number' in allMatches[j])) || (!isUl && 'number' in allMatches[j])) &&
-               allMatches[j].indent === current.indent) {
-            listItems.push(allMatches[j].content);
-            j++;
-        }
+        // 替换
+        result = result.substring(0, startPos) + listHtml + result.substring(endPos);
         
-        if (listItems.length > 0) {
-            // 构建HTML
-            const listTag = isUl ? 'ul' : 'ol';
-            const listHtml = `<${listTag}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listTag}>`;
-            
-            // 替换原始文本
-            const startPos = current.index + offset;
-            const endPos = (j < allMatches.length ? allMatches[j].index : result.length) + offset;
-            const originalText = result.substring(startPos, endPos);
-            
-            result = result.substring(0, startPos) + listHtml + result.substring(endPos);
-            
-            // 更新偏移量
-            offset += listHtml.length - originalText.length;
-            
-            // 更新索引
-            i = j - 1;
-        }
+        // 更新偏移量
+        offset += listHtml.length - originalText.length;
     }
     
     return result;
@@ -1845,49 +1848,45 @@ function processLists(markdown) {
 
 // 处理段落的辅助函数
 function processParagraphs(lines) {
+    if (!lines || lines.length === 0) return '';
+    
     const result = [];
-    let inParagraph = false;
+    let paragraphContent = '';
     
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const isEmptyLine = line.trim() === '';
-        const startsWithHtml = /^<\w+/.test(line);
+        const line = lines[i].trim();
         
-        // 如果是空行，结束当前段落
-        if (isEmptyLine) {
-            if (inParagraph) {
-                result[result.length - 1] += '</p>';
-            inParagraph = false;
+        // 判断是否为HTML元素或空行
+        const isHTML = line.startsWith('<') && !line.startsWith('<p>');
+        const isEmpty = line === '';
+        
+        // 如果当前有段落内容且遇到HTML或空行，关闭段落
+        if (paragraphContent && (isHTML || isEmpty)) {
+            result.push(`<p>${paragraphContent}</p>`);
+            paragraphContent = '';
         }
-            result.push('');
-            continue;
-    }
         
-        // 如果是HTML标签开始，直接添加
-        if (startsWithHtml) {
-    if (inParagraph) {
-                result[result.length - 1] += '</p>';
-                inParagraph = false;
-            }
+        // 处理HTML或空行
+        if (isHTML) {
             result.push(line);
-            continue;
-        }
-        
-        // 普通文本，添加到段落
-        if (!inParagraph) {
-            result.push('<p>' + line);
-            inParagraph = true;
+        } else if (isEmpty) {
+            result.push('');
+        } else if (!paragraphContent) {
+            // 开始新段落
+            paragraphContent = line;
         } else {
-            result[result.length - 1] += ' ' + line;
+            // 添加到现有段落
+            paragraphContent += ' ' + line;
         }
     }
     
-    // 关闭最后的段落
-    if (inParagraph) {
-        result[result.length - 1] += '</p>';
+    // 处理最后一个段落
+    if (paragraphContent) {
+        result.push(`<p>${paragraphContent}</p>`);
     }
     
-    return result.join('\n');
+    // 减少空行
+    return result.filter(line => line !== '' || Math.random() < 0.5).join('\n');
 }
 
 // 转义HTML特殊字符
