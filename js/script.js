@@ -1166,12 +1166,6 @@ async function streamAIResponse(userMessage, mode, model = null) {
         });
     }
     
-    // 创建结构化导航区域（用于长文本）
-    const tocContainer = document.createElement('div');
-    tocContainer.className = 'response-toc';
-    tocContainer.innerHTML = '<div class="toc-title">内容导航</div><ul class="toc-list"></ul>';
-    tocContainer.style.display = 'none'; // 默认隐藏，当检测到长文本时显示
-    
     // 自动保存的interval ID
     let autoSaveInterval = null;
     
@@ -1206,7 +1200,138 @@ async function streamAIResponse(userMessage, mode, model = null) {
     let lastProgressUpdate = 0;
     
     // 分批处理响应的最大长度
-    const maxBatchLength = 10000; // 10KB的文本一次处理
+    const maxBatchLength = 10000;
+    
+    // 创建智能分段渲染函数
+    const renderResponse = (content, isCompleted = false) => {
+        try {
+            // 格式化内容
+            const formattedContent = formatMessage(content);
+            
+            // 创建一个新的div用于检查内容大小
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = formattedContent;
+            
+            // 检查内容大小，超过一定长度进行优化渲染
+            if (content.length > 30000 && !isCompleted) {
+                // 长文本增量渲染：只显示最后的10000个字符
+                const displayLength = 10000;
+                const displayContent = content.slice(-displayLength);
+                messageContent.innerHTML = formatMessage(displayContent);
+                
+                // 添加提示信息
+                const progressInfo = document.createElement('div');
+                progressInfo.className = 'content-progress-info';
+                progressInfo.innerHTML = `<span>正在接收长文本内容，已接收 ${content.length} 个字符...</span>`;
+                messageContent.insertBefore(progressInfo, messageContent.firstChild);
+            } else {
+                // 标准长度文本，直接渲染
+                messageContent.innerHTML = formattedContent;
+            }
+            
+            // 完成回复后，添加长文本优化处理
+            if (isCompleted && content.length > 3000) {
+                // 为长回复添加信息展示计数
+                const contentInfo = document.createElement('div');
+                contentInfo.className = 'content-info';
+                contentInfo.innerHTML = `<span>总计 ${content.length} 个字符, ${content.split('\n').length} 行内容</span>`;
+                messageContent.insertBefore(contentInfo, messageContent.firstChild);
+                
+                // 添加锚点导航 (只在完成时添加)
+                addContentAnchors(messageContent);
+            }
+            
+            // 重新添加思考区域（如果存在）
+            if (thinkingSection) {
+                messageContent.appendChild(thinkingSection);
+            }
+            
+            // 添加复制按钮
+            messageContent.appendChild(copyBtn);
+            
+            // 重新添加进度指示器（如果未完成）
+            if (!isCompleted && progressIndicator) {
+                messageContent.appendChild(progressIndicator);
+            }
+        } catch (error) {
+            console.error('渲染内容出错:', error);
+            
+            // 如果渲染失败，使用分块渲染方法
+            try {
+                // 将内容分成更小的块
+                messageContent.innerHTML = '';
+                const chunkSize = 5000;
+                for (let i = 0; i < content.length; i += chunkSize) {
+                    const chunk = content.slice(i, i + chunkSize);
+                    const chunkDiv = document.createElement('div');
+                    chunkDiv.innerHTML = formatMessage(chunk);
+                    messageContent.appendChild(chunkDiv);
+                }
+                
+                // 重新添加思考区域和其他元素
+                if (thinkingSection) {
+                    messageContent.appendChild(thinkingSection);
+                }
+                
+                if (!isCompleted && progressIndicator) {
+                    messageContent.appendChild(progressIndicator);
+                }
+                
+                messageContent.appendChild(copyBtn);
+            } catch (e) {
+                console.error('分块渲染也失败:', e);
+                messageContent.innerHTML = '<p class="error-message">渲染内容遇到问题，但数据已保存。</p>';
+            }
+        }
+        
+        // 滚动到底部
+        scrollToBottom();
+    };
+    
+    // 添加内容锚点导航
+    const addContentAnchors = (contentElement) => {
+        // 查找标题元素
+        const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        if (headings.length < 2) return; // 少于2个标题不需要锚点
+        
+        // 创建锚点导航容器
+        const anchorNav = document.createElement('div');
+        anchorNav.className = 'anchor-navigation';
+        anchorNav.innerHTML = '<div class="anchor-title">快速导航</div><div class="anchor-links"></div>';
+        
+        const linkContainer = anchorNav.querySelector('.anchor-links');
+        
+        // 为每个标题创建锚点
+        headings.forEach((heading, index) => {
+            const headingId = `heading-${messageId}-${index}`;
+            heading.id = headingId;
+            
+            // 创建锚点链接
+            const anchorLink = document.createElement('a');
+            anchorLink.href = `#${headingId}`;
+            anchorLink.className = `anchor-link level-${heading.tagName.toLowerCase()}`;
+            anchorLink.textContent = heading.textContent.trim();
+            
+            // 添加点击事件
+            anchorLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // 滚动到标题位置
+                heading.scrollIntoView({behavior: 'smooth'});
+                
+                // 添加高亮效果
+                heading.classList.add('highlight-heading');
+                setTimeout(() => {
+                    heading.classList.remove('highlight-heading');
+                }, 2000);
+            });
+            
+            linkContainer.appendChild(anchorLink);
+        });
+        
+        // 添加到内容顶部
+        contentElement.insertBefore(anchorNav, contentElement.firstChild);
+    };
     
     try {
         // 启动自动保存
@@ -1237,81 +1362,19 @@ async function streamAIResponse(userMessage, mode, model = null) {
                         }
                     }
                     
-                    // 处理内容更新
+                    // 如果有内容增量，则添加到响应中
                     if (delta.content) {
                         const content = delta.content;
                         fullResponse += content;
-                        
-                        // 将内容分段，以便更好地处理大型响应
-                        const currentLength = fullResponse.length;
-                        const chunkSize = Math.floor(currentLength / progressUpdateInterval);
-                        
-                        // 更新进度
-                        if (chunkSize > lastProgressUpdate) {
-                            lastProgressUpdate = chunkSize;
-                            // 假设平均回复长度约20000字符
-                            const estimatedProgress = Math.min(95, (currentLength / 20000) * 100);
-                            updateProgress(estimatedProgress);
-                        }
-                        
-                        // 处理流式响应的分段显示
                         responseParts.push(content);
                         
-                        // 优化渲染性能 - 只在累积一定量的内容或时间间隔后更新UI
-                        // 这可以减少DOM操作频率，提高性能
-                        if (responseParts.length >= 10 || fullResponse.length % maxBatchLength === 0) {
-                            // 应用格式化并更新显示
-                            let formattedContent = fullResponse;
+                        // 定期更新显示，减少频繁DOM操作
+                        const now = Date.now();
+                        if (now - lastProgressUpdate > progressUpdateInterval || fullResponse.length % 1000 === 0) {
+                            lastProgressUpdate = now;
                             
-                            // 注释掉目录生成的逻辑
-                            /* 
-                            // 如果内容足够长，生成目录
-                            if (currentLength > 1000) { // 假设1000字符以上需要目录
-                                formattedContent = generateTOC(formattedContent);
-                            }
-                            */
-                            
-                            try {
-                                // 直接更新消息内容，不生成目录
-                                messageContent.innerHTML = formatMessage(formattedContent);
-                                
-                                // 不需要再添加目录了
-                                /* 
-                                // 如果有目录，添加到内容顶部
-                                if (tocContainer && !messageContent.querySelector('.response-toc')) {
-                                    messageContent.insertBefore(tocContainer, messageContent.firstChild);
-                                }
-                                */
-                                
-                                // 重新添加进度指示器
-                                messageContent.appendChild(progressIndicator);
-                                
-                                // 重新添加思考区域（如果存在）
-                                if (thinkingSection) {
-                                    messageContent.appendChild(thinkingSection);
-                                }
-                                
-                                // 添加复制按钮
-                                messageContent.appendChild(copyBtn);
-                                
-                                // 清空响应部分缓存
-                                responseParts.length = 0;
-                                
-                                // 滚动到底部
-                                scrollToBottom();
-                            } catch (renderError) {
-                                console.error('渲染响应内容时出错:', renderError);
-                                // 尝试分批渲染
-                                try {
-                                    // 如果内容过长，尝试只渲染最新的部分
-                                    const lastPart = formattedContent.slice(-maxBatchLength);
-                                    messageContent.innerHTML += formatMessage(lastPart);
-                                    scrollToBottom();
-                                } catch (e) {
-                                    // 如果还是失败，只更新错误信息，但不中断流
-                                    console.error('分批渲染也失败:', e);
-                                }
-                            }
+                            // 使用优化的渲染函数
+                            renderResponse(fullResponse);
                         }
                     }
                 }
@@ -1340,76 +1403,8 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     progressIndicator.parentNode.removeChild(progressIndicator);
                 }
                 
-                try {
-                    // 最终更新
-                    let finalContent = fullResponse;
-                    
-                    // 注释掉目录生成的逻辑
-                    /*
-                    // 生成最终目录
-                    if (fullResponse.length > 1000) {
-                        finalContent = generateTOC(finalContent);
-                    }
-                    */
-                    
-                    // 直接更新消息内容，不生成目录
-                    messageContent.innerHTML = formatMessage(finalContent);
-                    
-                    // 不需要再添加目录了
-                    /*
-                    // 如果有目录，添加到内容顶部
-                    if (tocContainer && !messageContent.querySelector('.response-toc')) {
-                        messageContent.insertBefore(tocContainer, messageContent.firstChild);
-                    }
-                    */
-                    
-                    // 重新添加思考区域（如果存在）
-                    if (thinkingSection) {
-                        messageContent.appendChild(thinkingSection);
-                    }
-                    
-                    // 添加复制按钮
-                    messageContent.appendChild(copyBtn);
-                    
-                    // 注释掉长文本导航和折叠功能
-                    /*
-                    // 添加长文本导航和折叠功能
-                    if (fullResponse.length > 3000) { // 超过3000字符的文本添加折叠功能
-                        addLongTextNavigation(messageContent);
-                    }
-                    */
-                } catch (finalRenderError) {
-                    console.error('最终渲染内容失败:', finalRenderError);
-                    // 尝试分批渲染
-                    try {
-                        const contentChunks = [];
-                        // 将长文本分成多个小块
-                        for (let i = 0; i < fullResponse.length; i += maxBatchLength) {
-                            contentChunks.push(fullResponse.slice(i, i + maxBatchLength));
-                        }
-                        
-                        // 清空内容
-                        messageContent.innerHTML = '';
-                        
-                        // 逐块添加内容
-                        contentChunks.forEach(chunk => {
-                            const chunkDiv = document.createElement('div');
-                            chunkDiv.innerHTML = formatMessage(chunk);
-                            messageContent.appendChild(chunkDiv);
-                        });
-                        
-                        // 重新添加思考区域
-                        if (thinkingSection) {
-                            messageContent.appendChild(thinkingSection);
-                        }
-                        
-                        // 添加复制按钮
-                        messageContent.appendChild(copyBtn);
-                    } catch (e) {
-                        console.error('分批渲染最终内容也失败:', e);
-                        messageContent.innerHTML = '<p>渲染过程出错，但内容已保存。请刷新页面重试。</p>';
-                    }
-                }
+                // 使用优化的渲染函数渲染完整内容
+                renderResponse(fullResponse, true);
                 
                 // 确保历史记录中不重复添加相同的消息
                 const existingMessage = chatHistory.find(msg => msg.id === messageId);
@@ -1439,21 +1434,12 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     completed: true
                 }));
             },
-            // 错误处理
             (error) => {
                 console.error('流式响应出错:', error);
-                
-                // 在控制台显示已接收的部分内容，帮助诊断中断问题
-                if (fullResponse) {
-                    console.log('%c中断时已接收的AI回答内容 (ID: ' + messageId + '):', 'background:#ff6b6b; color:white; padding:3px 6px; border-radius:3px; font-weight:bold;');
-                    console.log(fullResponse);
-                    console.log(`%c已接收: ${fullResponse.length} 字符, ${fullResponse.split('\n').length} 行`, 'color:#ff6b6b; font-weight:bold;');
-                }
                 
                 // 清除自动保存
                 if (autoSaveInterval) {
                     clearInterval(autoSaveInterval);
-                    autoSaveInterval = null;
                 }
                 
                 // 移除进度指示器
@@ -1461,37 +1447,18 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     progressIndicator.parentNode.removeChild(progressIndicator);
                 }
                 
-                // 添加错误消息，但保留已生成的内容
+                // 如果有部分响应，显示部分响应和错误信息
                 if (fullResponse) {
-                    try {
-                        messageContent.innerHTML = formatMessage(fullResponse);
-                        messageContent.innerHTML += `
-                            <div class="error-message">
-                                <i class="fas fa-exclamation-triangle"></i> 
-                                错误: ${error.message || '连接中断'}
-                            </div>
-                            <div class="error-recovery">
-                                长文本接收过程中断，但已成功接收部分内容。
-                                <button id="retry-btn-${messageId}" class="retry-btn">
-                                    <i class="fas fa-redo"></i> 重试
-                                </button>
-                            </div>
-                        `;
-                        
-                        // 添加重试按钮事件
-                        setTimeout(() => {
-                            const retryBtn = document.getElementById(`retry-btn-${messageId}`);
-                            if (retryBtn) {
-                                retryBtn.addEventListener('click', () => {
-                                    // 重新发送请求，但从当前位置继续
-                                    streamAIResponse(userMessage + " (继续上次回答，从中断处继续)", mode, model);
-                                });
-                            }
-                        }, 100);
-                    } catch (e) {
-                        console.error('渲染错误消息失败:', e);
-                        messageContent.innerHTML = `<p>接收长文本时发生错误，但已保存部分内容。请刷新页面再试。</p>`;
-                    }
+                    console.warn('中断前已接收内容长度:', fullResponse.length);
+                    
+                    // 使用优化的渲染函数渲染中断前的内容
+                    renderResponse(fullResponse, true);
+                    
+                    // 添加错误提示
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'error-message';
+                    errorMessage.textContent = `回答中断：${error.message}`;
+                    messageContent.appendChild(errorMessage);
                 } else {
                     messageContent.innerHTML = `<p class="error-message">错误: ${error.message}</p>`;
                 }
