@@ -1227,12 +1227,6 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 // 清空当前内容
                 messageContent.innerHTML = '';
                 
-                // 创建内容信息显示
-                const contentInfo = document.createElement('div');
-                contentInfo.className = 'content-info';
-                contentInfo.innerHTML = `<span>总计 ${content.length} 个字符, ${content.split('\n').length} 行内容</span>`;
-                messageContent.appendChild(contentInfo);
-                
                 // 使用超小块分段渲染方式确保显示完整
                 const microChunkSize = 3000; // 小块大小
                 const chunks = [];
