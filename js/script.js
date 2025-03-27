@@ -1269,8 +1269,8 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 // 将包装容器添加到消息内容
                 messageContent.appendChild(contentWrapper);
                 
-                // 添加锚点导航 (只在完成时添加)
-                addContentAnchors(messageContent);
+                // 添加锚点导航 (只在完成时添加) - 移除目录导航功能
+                // addContentAnchors(messageContent);
                 
                 // 重新添加思考区域（如果存在）
                 if (thinkingSection) {
@@ -1366,7 +1366,8 @@ async function streamAIResponse(userMessage, mode, model = null) {
         scrollToBottom();
     };
     
-    // 添加内容锚点导航
+    // 添加内容锚点导航 - 注释掉相关功能
+    /*
     const addContentAnchors = (contentElement) => {
         // 查找标题元素
         const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
@@ -1410,6 +1411,7 @@ async function streamAIResponse(userMessage, mode, model = null) {
         // 添加到内容顶部
         contentElement.insertBefore(anchorNav, contentElement.firstChild);
     };
+    */
     
     try {
         // 启动自动保存
@@ -1589,254 +1591,6 @@ async function streamAIResponse(userMessage, mode, model = null) {
         
         // 添加复制按钮
             messageContent.appendChild(copyBtn);
-    }
-}
-
-// 为长文本添加导航和折叠功能
-function addLongTextNavigation(contentElement) {
-    // 查找所有标题
-    const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    
-    if (headings.length < 3) return; // 不足3个标题不需要处理
-    
-    // 创建目录导航
-    const tocContainer = document.createElement('div');
-    tocContainer.className = 'response-toc';
-    tocContainer.innerHTML = '<div class="toc-title"><i class="fas fa-list"></i> 内容导航</div><ul class="toc-list"></ul>';
-    
-    const tocList = tocContainer.querySelector('.toc-list');
-    
-    // 为每个标题添加ID和添加到目录
-    headings.forEach((heading, index) => {
-        const headingId = `heading-${Date.now()}-${index}`;
-        heading.id = headingId;
-        
-        const headingText = heading.textContent.replace(/折叠\/展开此部分/, '').trim();
-        const headingLevel = parseInt(heading.tagName.substring(1));
-        
-        // 创建目录项
-        const li = document.createElement('li');
-        li.className = `toc-item toc-level-${headingLevel}`;
-        li.innerHTML = `<a href="#${headingId}">${headingText}</a>`;
-        
-        // 添加点击事件，平滑滚动到标题位置
-        li.addEventListener('click', (e) => {
-            e.preventDefault();
-            heading.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-            
-            // 添加高亮效果然后淡出
-            heading.classList.add('highlight-heading');
-            setTimeout(() => {
-                heading.classList.remove('highlight-heading');
-            }, 2000);
-        });
-        
-        tocList.appendChild(li);
-    });
-    
-    // 创建折叠控制器
-    const sections = [];
-    let currentSection = null;
-    
-    // 遍历内容，为每个部分添加折叠功能
-    Array.from(headings).forEach((heading, index) => {
-        // 创建折叠控制按钮
-        const collapseBtn = document.createElement('button');
-        collapseBtn.className = 'collapse-section-btn';
-        collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
-        collapseBtn.title = '折叠/展开此部分';
-        heading.appendChild(collapseBtn);
-        
-        // 获取当前标题到下一个标题之间的所有内容
-        let sectionContent = [];
-        let nextElement = heading.nextElementSibling;
-        
-        while (nextElement && !['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(nextElement.tagName)) {
-            sectionContent.push(nextElement);
-            nextElement = nextElement.nextElementSibling;
-        }
-        
-        // 添加折叠事件处理
-        collapseBtn.addEventListener('click', () => {
-            const isCollapsed = collapseBtn.classList.contains('collapsed');
-            
-            if (isCollapsed) {
-                // 展开
-                collapseBtn.classList.remove('collapsed');
-                collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                
-                // 添加动画效果
-                sectionContent.forEach(el => {
-                    el.style.display = '';
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateY(-10px)';
-                    
-                    // 触发动画
-                    setTimeout(() => {
-                        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                        el.style.opacity = '1';
-                        el.style.transform = 'translateY(0)';
-                    }, 10);
-                });
-            } else {
-                // 折叠
-                collapseBtn.classList.add('collapsed');
-                collapseBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                
-                // 添加动画效果
-                sectionContent.forEach(el => {
-                    el.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateY(-10px)';
-                    
-                    // 等待动画完成后隐藏
-                    setTimeout(() => {
-                        el.style.display = 'none';
-                    }, 200);
-                });
-            }
-        });
-        
-        sections.push({
-            heading,
-            content: sectionContent,
-            collapseBtn
-        });
-    });
-    
-    // 添加全部折叠/展开按钮
-    if (sections.length > 0) {
-        const controlsContainer = document.createElement('div');
-        controlsContainer.className = 'message-section-controls';
-        
-        const expandAllBtn = document.createElement('button');
-        expandAllBtn.className = 'expand-all-btn';
-        expandAllBtn.innerHTML = '<i class="fas fa-expand-alt"></i> 展开全部';
-        expandAllBtn.addEventListener('click', () => {
-            sections.forEach(section => {
-                if (section.collapseBtn.classList.contains('collapsed')) {
-                    section.collapseBtn.click();
-                }
-            });
-        });
-        
-        const collapseAllBtn = document.createElement('button');
-        collapseAllBtn.className = 'collapse-all-btn';
-        collapseAllBtn.innerHTML = '<i class="fas fa-compress-alt"></i> 折叠全部';
-        collapseAllBtn.addEventListener('click', () => {
-            sections.forEach(section => {
-                if (!section.collapseBtn.classList.contains('collapsed')) {
-                    section.collapseBtn.click();
-                }
-            });
-        });
-        
-        // 添加悬浮提示
-        expandAllBtn.title = "展开所有内容段落";
-        collapseAllBtn.title = "折叠所有内容段落";
-        
-        controlsContainer.appendChild(expandAllBtn);
-        controlsContainer.appendChild(collapseAllBtn);
-        
-        // 将目录添加到控制容器中
-        const tocWrapper = document.createElement('div');
-        tocWrapper.className = 'toc-wrapper';
-        tocWrapper.appendChild(tocContainer);
-        
-        // 添加到消息内容的顶部
-        contentElement.insertBefore(controlsContainer, contentElement.firstChild);
-        contentElement.insertBefore(tocWrapper, contentElement.firstChild);
-        
-        // 添加全局样式 - 如果尚未添加
-        if (!document.getElementById('long-text-nav-styles')) {
-            const style = document.createElement('style');
-            style.id = 'long-text-nav-styles';
-            style.textContent = `
-                .highlight-heading {
-                    animation: heading-highlight 2s ease;
-                }
-                
-                @keyframes heading-highlight {
-                    0%, 100% {
-                        background-color: transparent;
-                    }
-                    30% {
-                        background-color: rgba(74, 123, 255, 0.2);
-                    }
-                }
-                
-                .toc-wrapper {
-                    margin-bottom: 15px;
-                }
-                
-                .response-toc {
-                    border-radius: 8px;
-                    border: 1px solid rgba(128, 128, 128, 0.2);
-                    overflow: hidden;
-                    margin-top: 10px;
-                    background-color: rgba(0, 0, 0, 0.02);
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-                }
-                
-                .toc-title {
-                    padding: 10px 15px;
-                    font-weight: 500;
-                    background-color: rgba(74, 123, 255, 0.1);
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-size: 14px;
-                    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-                }
-                
-                .toc-list {
-                    padding: 10px 15px;
-                    max-height: 200px;
-                    overflow-y: auto;
-                }
-                
-                .toc-item a {
-                    display: block;
-                    padding: 4px 8px;
-                    border-radius: 4px;
-                    transition: all 0.2s ease;
-                }
-                
-                .toc-item a:hover {
-                    background-color: rgba(74, 123, 255, 0.1);
-                    transform: translateX(3px);
-                }
-                
-                .message-section-controls {
-                    display: flex;
-                    gap: 10px;
-                    margin-bottom: 12px;
-                }
-                
-                .collapse-all-btn,
-                .expand-all-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    background-color: rgba(128, 128, 128, 0.1);
-                    border: none;
-                    border-radius: 4px;
-                    padding: 6px 12px;
-                    font-size: 13px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                }
-                
-                .collapse-all-btn:hover,
-                .expand-all-btn:hover {
-                    background-color: rgba(74, 123, 255, 0.15);
-                }
-            `;
-            document.head.appendChild(style);
-        }
     }
 }
 
