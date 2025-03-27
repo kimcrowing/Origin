@@ -171,18 +171,86 @@
         
         document.getElementById('copy-btn').addEventListener('click', function() {
             const configText = document.getElementById('encrypted-config').textContent;
+            const copyBtn = document.getElementById('copy-btn');
             
-            navigator.clipboard.writeText(configText)
-                .then(() => {
-                    const copyBtn = document.getElementById('copy-btn');
-                    copyBtn.textContent = '已复制！';
-                    setTimeout(() => {
-                        copyBtn.textContent = '复制到剪贴板';
-                    }, 2000);
-                })
-                .catch(err => {
+            // 后备复制方法
+            function fallbackCopyToClipboard(text) {
+                // 创建临时文本区域元素
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                
+                // 设置样式使其不可见
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = 0;
+                textarea.style.top = '0';
+                textarea.style.left = '0';
+                
+                // 确保在移动设备上能正确工作
+                textarea.style.width = '1px';
+                textarea.style.height = '1px';
+                textarea.style.padding = 0;
+                textarea.style.border = 'none';
+                textarea.style.outline = 'none';
+                textarea.style.boxShadow = 'none';
+                textarea.style.background = 'transparent';
+                
+                // 添加到DOM
+                document.body.appendChild(textarea);
+                
+                try {
+                    // 选择文本
+                    textarea.focus();
+                    textarea.select();
+                    
+                    // 兼容iOS
+                    var range = document.createRange();
+                    range.selectNodeContents(textarea);
+                    var selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    textarea.setSelectionRange(0, text.length);
+                    
+                    // 执行复制命令
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        console.log('内容已复制到剪贴板(fallback)');
+                        // 显示成功提示
+                        copyBtn.textContent = '已复制！';
+                        setTimeout(() => {
+                            copyBtn.textContent = '复制到剪贴板';
+                        }, 2000);
+                    } else {
+                        console.error('复制失败(fallback)');
+                        alert('复制失败，请手动选择并复制');
+                    }
+                } catch (err) {
+                    console.error('复制失败:', err);
                     alert('复制失败: ' + err.message);
-                });
+                }
+                
+                // 移除临时元素
+                document.body.removeChild(textarea);
+            }
+            
+            // 先尝试使用现代Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(configText)
+                    .then(() => {
+                        copyBtn.textContent = '已复制！';
+                        setTimeout(() => {
+                            copyBtn.textContent = '复制到剪贴板';
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('现代复制API失败:', err);
+                        // 如果失败，使用后备方法
+                        fallbackCopyToClipboard(configText);
+                    });
+            } else {
+                // 浏览器不支持Clipboard API，直接使用后备方法
+                console.log('浏览器不支持Clipboard API，使用后备复制方法');
+                fallbackCopyToClipboard(configText);
+            }
         });
     </script>
 </body>

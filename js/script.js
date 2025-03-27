@@ -3065,7 +3065,7 @@ function addCopyButtonsToMessages() {
             // 创建复制按钮
             const copyBtn = document.createElement('button');
             copyBtn.className = 'copy-btn';
-            copyBtn.innerHTML = '<i class="fas fa-copy fa-sm"></i><span class="copy-text">复制</span>';
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i><span class="copy-text">复制</span>';
             copyBtn.title = '复制内容';
             copyBtn.setAttribute('data-action', 'copy');
             
@@ -3100,24 +3100,89 @@ function handleCopyButtonClick(e) {
     // 获取纯文本
     const textToCopy = tempElement.textContent.trim();
     
-    // 复制到剪贴板
-    navigator.clipboard.writeText(textToCopy)
-        .then(() => {
-            // 显示复制成功提示
-            const copyText = copyBtn.querySelector('.copy-text');
-            if (copyText) {
-                const originalText = copyText.textContent;
-                copyText.textContent = '已复制!';
-                
-                // 恢复原文本
-                setTimeout(() => {
-                    copyText.textContent = originalText;
-                }, 2000);
+    // 显示复制成功提示函数
+    const showCopySuccess = () => {
+        const copyText = copyBtn.querySelector('.copy-text');
+        if (copyText) {
+            const originalText = copyText.textContent;
+            copyText.textContent = '已复制!';
+            
+            // 恢复原文本
+            setTimeout(() => {
+                copyText.textContent = originalText;
+            }, 2000);
+        }
+    };
+    
+    // 后备复制方法
+    const fallbackCopyToClipboard = (text) => {
+        // 创建临时文本区域元素
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        
+        // 设置样式使其不可见
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = 0;
+        textarea.style.top = '0';
+        textarea.style.left = '0';
+        
+        // 确保在移动设备上能正确工作
+        textarea.style.width = '1px';
+        textarea.style.height = '1px';
+        textarea.style.padding = 0;
+        textarea.style.border = 'none';
+        textarea.style.outline = 'none';
+        textarea.style.boxShadow = 'none';
+        textarea.style.background = 'transparent';
+        
+        // 添加到DOM
+        document.body.appendChild(textarea);
+        
+        try {
+            // 选择文本
+            textarea.focus();
+            textarea.select();
+            
+            // 兼容iOS
+            var range = document.createRange();
+            range.selectNodeContents(textarea);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            textarea.setSelectionRange(0, text.length);
+            
+            // 执行复制命令
+            const successful = document.execCommand('copy');
+            if (successful) {
+                console.log('内容已复制到剪贴板(fallback)');
+                showCopySuccess();
+            } else {
+                console.error('复制失败(fallback)');
             }
-        })
-        .catch(err => {
+        } catch (err) {
             console.error('复制失败:', err);
-        });
+        }
+        
+        // 移除临时元素
+        document.body.removeChild(textarea);
+    };
+    
+    // 先尝试使用现代Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                showCopySuccess();
+            })
+            .catch(err => {
+                console.error('现代复制API失败:', err);
+                // 如果失败，使用后备方法
+                fallbackCopyToClipboard(textToCopy);
+            });
+    } else {
+        // 浏览器不支持Clipboard API，直接使用后备方法
+        console.log('浏览器不支持Clipboard API，使用后备复制方法');
+        fallbackCopyToClipboard(textToCopy);
+    }
 }
 
 // 处理特殊命令
