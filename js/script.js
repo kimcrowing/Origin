@@ -1320,6 +1320,15 @@ async function streamAIResponse(userMessage, mode, model = null) {
             () => {
                 console.log('流式响应完成，消息ID:', messageId);
                 
+                // 在控制台显示完整的AI回答内容，方便用户对比查看
+                console.log('%c完整AI回答内容 (ID: ' + messageId + '):', 'background:#4a7bff; color:white; padding:3px 6px; border-radius:3px; font-weight:bold;');
+                console.log(fullResponse);
+                
+                // 统计字数和行数
+                const charCount = fullResponse.length;
+                const lineCount = fullResponse.split('\n').length;
+                console.log(`%c回答统计: ${charCount} 字符, ${lineCount} 行`, 'color:#4a7bff; font-weight:bold;');
+                
                 // 清除自动保存
                 if (autoSaveInterval) {
                     clearInterval(autoSaveInterval);
@@ -1433,6 +1442,13 @@ async function streamAIResponse(userMessage, mode, model = null) {
             // 错误处理
             (error) => {
                 console.error('流式响应出错:', error);
+                
+                // 在控制台显示已接收的部分内容，帮助诊断中断问题
+                if (fullResponse) {
+                    console.log('%c中断时已接收的AI回答内容 (ID: ' + messageId + '):', 'background:#ff6b6b; color:white; padding:3px 6px; border-radius:3px; font-weight:bold;');
+                    console.log(fullResponse);
+                    console.log(`%c已接收: ${fullResponse.length} 字符, ${fullResponse.split('\n').length} 行`, 'color:#ff6b6b; font-weight:bold;');
+                }
                 
                 // 清除自动保存
                 if (autoSaveInterval) {

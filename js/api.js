@@ -103,6 +103,12 @@ class ApiService {
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
             
+            // 创建累积跟踪器
+            let totalContentReceived = '';
+            let totalChunksReceived = 0;
+            let lastLogTime = Date.now();
+            const logInterval = 5000; // 每5秒记录一次进度
+            
             // 重试计数器
             let retries = 0;
             const maxRetries = 5; // 增加最大重试次数
@@ -110,6 +116,9 @@ class ApiService {
             // 跟踪处理的token数量（用于大型响应处理）
             let processedTokens = 0;
             const chunkSize = 1000; // 每1000个token一个处理单元
+            
+            // 在控制台显示请求开始
+            console.log('%c开始接收流式响应 (模型: ' + (model || this.config.defaultModel) + ')', 'background:#4CAF50; color:white; padding:3px 6px; border-radius:3px;');
             
             // 响应超时检测
             let lastResponseTime = Date.now();
@@ -119,7 +128,14 @@ class ApiService {
                 if (currentTime - lastResponseTime > responseTimeout) {
                     clearInterval(timeoutCheckInterval);
                     reader.cancel(); // 取消流读取
+                    console.warn(`流响应超时 (已接收 ${totalChunksReceived} 个数据块, ${totalContentReceived.length} 个字符)`);
                     onError && onError(new Error('响应超时，可能是网络问题或服务器繁忙'));
+                }
+                
+                // 定期记录进度
+                if (currentTime - lastLogTime > logInterval) {
+                    console.log(`%c接收进度: ${totalChunksReceived} 个数据块, ${totalContentReceived.length} 个字符`, 'color:#4CAF50');
+                    lastLogTime = currentTime;
                 }
             }, 5000); // 每5秒检查一次
             
@@ -168,12 +184,17 @@ class ApiService {
                         const jsonStr = line.slice(6);
                         if (jsonStr === '[DONE]') {
                             clearInterval(timeoutCheckInterval);
+                            
+                            // 记录完成状态
+                            console.log(`%c流式响应完成! 共接收 ${totalChunksReceived} 个数据块, ${totalContentReceived.length} 个字符`, 'background:#4CAF50; color:white; padding:3px 6px; border-radius:3px;');
+                            
                             onComplete && onComplete();
                             continue;
                         }
                         
                         try {
                             const data = JSON.parse(jsonStr);
+                            totalChunksReceived++;
                             
                             // 处理思考过程
                             if (data.choices && data.choices[0]) {
@@ -194,6 +215,11 @@ class ApiService {
                                     
                                     // 传递思考过程
                                     onChunk && onChunk(thinkingData);
+                                }
+                                
+                                // 累积内容
+                                if (choice.delta && choice.delta.content) {
+                                    totalContentReceived += choice.delta.content;
                                 }
                                 
                                 // 跟踪处理的token数量
@@ -231,6 +257,14 @@ class ApiService {
                     if (jsonStr !== '[DONE]') {
                         try {
                             const data = JSON.parse(jsonStr);
+                            totalChunksReceived++;
+                            
+                            // 累积最后的内容
+                            if (data.choices && data.choices[0] && 
+                                data.choices[0].delta && data.choices[0].delta.content) {
+                                totalContentReceived += data.choices[0].delta.content;
+                            }
+                            
                             onChunk && onChunk(data);
                         } catch (e) {
                             console.warn('无法解析最后的流式响应:', jsonStr);
@@ -240,6 +274,10 @@ class ApiService {
             }
             
             clearInterval(timeoutCheckInterval);
+            
+            // 记录最终完成的字符总数
+            console.log(`%c最终接收统计: ${totalContentReceived.length} 个字符, ${totalContentReceived.split('\n').length} 行`, 'color:#4CAF50; font-weight:bold;');
+            
             onComplete && onComplete();
         } catch (error) {
             console.error('流式API调用失败:', error);
