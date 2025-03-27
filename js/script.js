@@ -1205,12 +1205,80 @@ async function streamAIResponse(userMessage, mode, model = null) {
     // 创建智能分段渲染函数
     const renderResponse = (content, isCompleted = false) => {
         try {
+            console.log(`开始渲染内容，长度: ${content.length}字符，是否完成: ${isCompleted}`);
+            
             // 格式化内容
             const formattedContent = formatMessage(content);
             
-            // 创建一个新的div用于检查内容大小
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = formattedContent;
+            // 完整内容始终保存到隐藏元素中，以便确保内容完整性
+            if (isCompleted) {
+                // 创建或获取隐藏的完整内容存储元素
+                let fullContentStore = messageContent.querySelector('.full-content-store');
+                if (!fullContentStore) {
+                    fullContentStore = document.createElement('div');
+                    fullContentStore.className = 'full-content-store';
+                    fullContentStore.style.display = 'none';
+                    messageContent.appendChild(fullContentStore);
+                }
+                
+                // 存储完整的原始内容
+                fullContentStore.textContent = content;
+                
+                // 添加检查按钮，如果发现显示内容不完整可以快速恢复
+                const checkCompleteBtn = document.createElement('button');
+                checkCompleteBtn.className = 'check-complete-btn';
+                checkCompleteBtn.innerHTML = '内容显示不完整？点击恢复';
+                checkCompleteBtn.title = '如果发现内容显示不全，点击此按钮尝试恢复';
+                checkCompleteBtn.addEventListener('click', () => {
+                    console.log('用户点击恢复完整内容');
+                    // 使用直接渲染和备用渲染两种方式尝试恢复
+                    try {
+                        // 方法1：直接渲染
+                        messageContent.innerHTML = formatMessage(fullContentStore.textContent);
+                        console.log('使用方法1恢复内容');
+                        
+                        // 重新添加存储元素
+                        messageContent.appendChild(fullContentStore);
+                        
+                        // 重新添加恢复按钮
+                        messageContent.appendChild(checkCompleteBtn);
+                        
+                    } catch (e) {
+                        console.error('直接渲染恢复失败，尝试分块渲染:', e);
+                        
+                        // 方法2：分块渲染
+                        try {
+                            const fullText = fullContentStore.textContent;
+                            messageContent.innerHTML = '';
+                            
+                            // 更小的块大小，确保能够处理
+                            const smallerChunkSize = 3000;
+                            for (let i = 0; i < fullText.length; i += smallerChunkSize) {
+                                const chunk = fullText.slice(i, i + smallerChunkSize);
+                                const chunkDiv = document.createElement('div');
+                                chunkDiv.innerHTML = formatMessage(chunk);
+                                messageContent.appendChild(chunkDiv);
+                            }
+                            
+                            // 重新添加存储元素和按钮
+                            messageContent.appendChild(fullContentStore);
+                            messageContent.appendChild(checkCompleteBtn);
+                            console.log('使用方法2恢复内容');
+                        } catch (e2) {
+                            console.error('所有恢复方法均失败:', e2);
+                            messageContent.innerHTML = '<p class="error-message">无法恢复完整内容，请刷新页面重试</p>';
+                        }
+                    }
+                    
+                    // 重新添加思考区域（如果存在）
+                    if (thinkingSection) {
+                        messageContent.appendChild(thinkingSection);
+                    }
+                    
+                    // 重新添加复制按钮
+                    messageContent.appendChild(copyBtn);
+                });
+            }
             
             // 检查内容大小，超过一定长度进行优化渲染
             if (content.length > 30000 && !isCompleted) {
@@ -1224,13 +1292,46 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 progressInfo.className = 'content-progress-info';
                 progressInfo.innerHTML = `<span>正在接收长文本内容，已接收 ${content.length} 个字符...</span>`;
                 messageContent.insertBefore(progressInfo, messageContent.firstChild);
-            } else {
-                // 标准长度文本，直接渲染
-                messageContent.innerHTML = formattedContent;
-            }
-            
-            // 完成回复后，添加长文本优化处理
-            if (isCompleted && content.length > 3000) {
+            } else if (isCompleted) {
+                // 完成时使用新的分块渲染方法确保完整显示
+                // 这是确保大型内容显示完整的关键部分
+                console.log('使用分块渲染显示完整内容');
+                
+                // 清空当前内容
+                messageContent.innerHTML = '';
+                
+                // 创建一个包装容器以便更好地管理内容
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'complete-content-wrapper';
+                
+                // 如果内容非常长，分块处理
+                if (content.length > 20000) {
+                    // 使用更小的块来避免DOM处理限制
+                    const chunkSize = 10000;
+                    const chunks = [];
+                    
+                    // 分割内容为多个块
+                    for (let i = 0; i < content.length; i += chunkSize) {
+                        chunks.push(content.slice(i, i + chunkSize));
+                    }
+                    
+                    console.log(`将内容分为 ${chunks.length} 个块处理`);
+                    
+                    // 处理每个块
+                    chunks.forEach((chunk, index) => {
+                        const chunkDiv = document.createElement('div');
+                        chunkDiv.className = `content-chunk chunk-${index}`;
+                        chunkDiv.innerHTML = formatMessage(chunk);
+                        contentWrapper.appendChild(chunkDiv);
+                    });
+                } else {
+                    // 对于中等长度的内容，直接渲染
+                    contentWrapper.innerHTML = formattedContent;
+                }
+                
+                // 将包装容器添加到消息内容
+                messageContent.appendChild(contentWrapper);
+                
                 // 为长回复添加信息展示计数
                 const contentInfo = document.createElement('div');
                 contentInfo.className = 'content-info';
@@ -1239,6 +1340,25 @@ async function streamAIResponse(userMessage, mode, model = null) {
                 
                 // 添加锚点导航 (只在完成时添加)
                 addContentAnchors(messageContent);
+                
+                // 如果内容超过50000字符，添加"显示完整内容"按钮
+                if (content.length > 50000) {
+                    const showFullBtn = document.createElement('button');
+                    showFullBtn.className = 'show-full-content-btn';
+                    showFullBtn.textContent = '确保显示完整内容';
+                    showFullBtn.title = '点击确保显示全部内容';
+                    showFullBtn.addEventListener('click', () => {
+                        // 触发上面创建的恢复功能
+                        const checkBtn = messageContent.querySelector('.check-complete-btn');
+                        if (checkBtn) checkBtn.click();
+                    });
+                    
+                    // 添加到内容顶部
+                    messageContent.insertBefore(showFullBtn, messageContent.firstChild);
+                }
+            } else {
+                // 标准长度文本，直接渲染
+                messageContent.innerHTML = formattedContent;
             }
             
             // 重新添加思考区域（如果存在）
@@ -1268,6 +1388,14 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     messageContent.appendChild(chunkDiv);
                 }
                 
+                // 如果完成了，添加内容信息
+                if (isCompleted) {
+                    const contentInfo = document.createElement('div');
+                    contentInfo.className = 'content-info';
+                    contentInfo.innerHTML = `<span>总计 ${content.length} 个字符, ${content.split('\n').length} 行内容</span>`;
+                    messageContent.insertBefore(contentInfo, messageContent.firstChild);
+                }
+                
                 // 重新添加思考区域和其他元素
                 if (thinkingSection) {
                     messageContent.appendChild(thinkingSection);
@@ -1281,6 +1409,17 @@ async function streamAIResponse(userMessage, mode, model = null) {
             } catch (e) {
                 console.error('分块渲染也失败:', e);
                 messageContent.innerHTML = '<p class="error-message">渲染内容遇到问题，但数据已保存。</p>';
+                
+                // 创建恢复按钮
+                const recoveryBtn = document.createElement('button');
+                recoveryBtn.className = 'recovery-btn';
+                recoveryBtn.textContent = '尝试恢复内容';
+                recoveryBtn.addEventListener('click', () => {
+                    // 最简单的恢复方式：直接显示纯文本
+                    messageContent.innerHTML = '<pre class="raw-content">' + escapeHtml(content) + '</pre>';
+                    messageContent.appendChild(recoveryBtn);
+                });
+                messageContent.appendChild(recoveryBtn);
             }
         }
         

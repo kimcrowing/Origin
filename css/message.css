@@ -980,4 +980,109 @@
     color: #e53935;
     border-left: 3px solid #e53935;
     font-size: 14px;
+}
+
+/* 内容恢复按钮样式 */
+.check-complete-btn,
+.show-full-content-btn,
+.recovery-btn {
+    background-color: rgba(74, 123, 255, 0.1);
+    color: #4a7bff;
+    border: 1px solid rgba(74, 123, 255, 0.2);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.check-complete-btn:hover,
+.show-full-content-btn:hover,
+.recovery-btn:hover {
+    background-color: rgba(74, 123, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.check-complete-btn:before {
+    content: "\f021";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 6px;
+}
+
+.show-full-content-btn:before {
+    content: "\f06e";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 6px;
+}
+
+.recovery-btn:before {
+    content: "\f2ea";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 6px;
+}
+
+/* 完整内容存储器样式 */
+.full-content-store {
+    display: none;
+}
+
+/* 内容块样式 */
+.content-chunk {
+    position: relative;
+}
+
+.content-chunk:not(:first-child):before {
+    content: '';
+    height: 1px;
+    background: rgba(74, 123, 255, 0.1);
+    width: 100%;
+    display: block;
+    margin: 10px 0;
+}
+
+/* 原始内容显示 */
+.raw-content {
+    white-space: pre-wrap;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: #333;
+}
+
+.dark-theme .raw-content {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ddd;
+}
+
+/* 兼容深色模式的按钮样式 */
+.dark-theme .check-complete-btn,
+.dark-theme .show-full-content-btn,
+.dark-theme .recovery-btn {
+    background-color: rgba(74, 123, 255, 0.15);
+    color: #7aa3ff;
+    border-color: rgba(74, 123, 255, 0.3);
+}
+
+.dark-theme .check-complete-btn:hover,
+.dark-theme .show-full-content-btn:hover,
+.dark-theme .recovery-btn:hover {
+    background-color: rgba(74, 123, 255, 0.25);
+}
+
+/* 完整内容包装器样式 */
+.complete-content-wrapper {
+    width: 100%;
 } 
