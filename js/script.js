@@ -826,14 +826,23 @@ function initUserMenu() {
 
 // 更新用户菜单按钮显示
 function updateUserMenuButton() {
+    // 创建SVG图标
+    const userSvgIcon = `
+    <svg class="logo-svg" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.25 1.75C6.4915 1.75 1.75 6.4915 1.75 12.25C1.75 18.0085 6.4915 22.75 12.25 22.75C18.0085 22.75 22.75 18.0085 22.75 12.25C22.75 6.4915 18.0085 1.75 12.25 1.75ZM12.25 4.375C16.1165 4.375 19.25 7.5085 19.25 11.375C19.25 15.2415 16.1165 18.375 12.25 18.375C8.3835 18.375 5.25 15.2415 5.25 11.375C5.25 7.5085 8.3835 4.375 12.25 4.375Z" fill="currentColor"></path>
+        <path transform="translate(21, 17.5) scale(0.2) translate(-12.25, -12.25) translate(10.9375, 10.9375)" d="M12.25 1.75C6.4915 1.75 1.75 6.4915 1.75 12.25C1.75 18.0085 6.4915 22.75 12.25 22.75C18.0085 22.75 22.75 18.0085 22.75 12.25C22.75 6.4915 18.0085 1.75 12.25 1.75ZM12.25 4.375C16.1165 4.375 19.25 7.5085 19.25 11.375C19.25 15.2415 16.1165 18.375 12.25 18.375C8.3835 18.375 5.25 15.2415 5.25 11.375C5.25 7.5085 8.3835 4.375 12.25 4.375Z" fill="currentColor"></path>
+    </svg>`;
+
     if ((authService && authService.isLoggedIn) || currentUser) {
         const user = currentUser || authService.getCurrentUser();
         if (user) {
-            userMenuBtn.textContent = user.initials || 'U';
+            // 使用SVG图标替换文本
+            userMenuBtn.innerHTML = userSvgIcon;
             userMenuBtn.title = `${user.name} (${user.email})`;
         }
     } else {
-        userMenuBtn.textContent = '登录';
+        // 未登录状态，仍然使用SVG图标
+        userMenuBtn.innerHTML = userSvgIcon;
         userMenuBtn.title = '点击登录';
     }
 }
@@ -2243,12 +2252,19 @@ function checkUserLoginStatus() {
 
 // 更新用户界面
 function updateUserUI() {
+    // 创建SVG图标
+    const userSvgIcon = `
+    <svg class="logo-svg" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.25 1.75C6.4915 1.75 1.75 6.4915 1.75 12.25C1.75 18.0085 6.4915 22.75 12.25 22.75C18.0085 22.75 22.75 18.0085 22.75 12.25C22.75 6.4915 18.0085 1.75 12.25 1.75ZM12.25 4.375C16.1165 4.375 19.25 7.5085 19.25 11.375C19.25 15.2415 16.1165 18.375 12.25 18.375C8.3835 18.375 5.25 15.2415 5.25 11.375C5.25 7.5085 8.3835 4.375 12.25 4.375Z" fill="currentColor"></path>
+        <path transform="translate(21, 17.5) scale(0.2) translate(-12.25, -12.25) translate(10.9375, 10.9375)" d="M12.25 1.75C6.4915 1.75 1.75 6.4915 1.75 12.25C1.75 18.0085 6.4915 22.75 12.25 22.75C18.0085 22.75 22.75 18.0085 22.75 12.25C22.75 6.4915 18.0085 1.75 12.25 1.75ZM12.25 4.375C16.1165 4.375 19.25 7.5085 19.25 11.375C19.25 15.2415 16.1165 18.375 12.25 18.375C8.3835 18.375 5.25 15.2415 5.25 11.375C5.25 7.5085 8.3835 4.375 12.25 4.375Z" fill="currentColor"></path>
+    </svg>`;
+
     if (authService.isLoggedIn || currentUser) {
         const user = currentUser || authService.getCurrentUser();
         if (!user) return;
         
-        // 更新用户按钮显示
-        userMenuBtn.textContent = user.initials || 'U';
+        // 更新用户按钮显示，使用SVG图标
+        userMenuBtn.innerHTML = userSvgIcon;
         userMenuBtn.title = `${user.name} (${user.email})`;
         
         // 确保用户相关元素可见
@@ -2298,8 +2314,8 @@ function updateUserUI() {
             }
         }
     } else {
-        // 未登录状态
-        userMenuBtn.textContent = '登录';
+        // 未登录状态，使用SVG图标
+        userMenuBtn.innerHTML = userSvgIcon;
         userMenuBtn.title = '点击登录';
         userMenuBtn.classList.remove('admin-user');
         
