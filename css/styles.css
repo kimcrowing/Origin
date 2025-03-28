@@ -235,6 +235,7 @@ button:focus {
     overflow-y: auto;
     padding: 0 16px;
     scroll-behavior: smooth;
+    background-color: transparent;
 }
 
 .messages {
@@ -1478,7 +1479,6 @@ button:focus {
     
     :root.dark-theme-enforced .header,
     :root.dark-theme-enforced .app-container,
-    :root.dark-theme-enforced .chat-area,
     :root.dark-theme-enforced .input-footer {
         background-color: var(--dark-background-color);
         color: var(--dark-text-color);
@@ -1922,4 +1922,16 @@ button:focus {
 
 .light-theme .message-content code {
     background-color: rgba(0, 0, 0, 0.05);
+}
+
+:root.dark-theme-enforced .header,
+:root.dark-theme-enforced .app-container,
+:root.dark-theme-enforced .input-footer {
+    background-color: var(--dark-background-color);
+    color: var(--dark-text-color);
+}
+
+:root.dark-theme-enforced .chat-area {
+    background-color: transparent;
+    color: var(--dark-text-color);
 } 
