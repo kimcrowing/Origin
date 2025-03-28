@@ -357,7 +357,8 @@ class ThinkModeService {
           // 保存部分分析记录
           this.saveThinkResult(query, thinkingProcess, finalResult, error.message);
         },
-        model  // 使用思考模型
+        model,  // 使用思考模型
+        []      // 思考模式不使用历史上下文，传递空数组
       );
     } catch (error) {
       console.error('执行Think分析失败:', error);

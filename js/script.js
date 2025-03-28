@@ -640,7 +640,7 @@ function showWelcomeMessage() {
     // 根据登录状态显示不同的欢迎消息
     if ((!authService || !authService.isLoggedIn) && !currentUser) {
         // 未登录状态，显示登录提示
-        const welcomeMessage = `# 欢迎使用 Origin AI
+        const welcomeMessage = `# 欢迎使用 Origin
 
 感谢您使用我们的AI对话平台！
 
@@ -883,7 +883,7 @@ function handleMenuAction(action) {
             break;
         case 'Help & Feedback':
             // 处理帮助与反馈操作
-            const helpMessage = `# Origin AI 帮助指南
+            const helpMessage = `# Origin 帮助指南
 
 ## 基本功能
 - **对话**：直接输入问题或请求
@@ -1001,7 +1001,7 @@ function handleSubmit(event) {
     // 根据模式和流式选项决定如何处理
     if (isStreamingMode) {
         // 使用流式响应
-        streamAIResponse(userMessage, mode)
+        streamAIResponse(userMessage, chatHistory, mode)
             .finally(() => {
                 // 响应完成后，移除等待提示（如果有）
                 clearTimeout(waitTimeout);
@@ -1014,11 +1014,11 @@ function handleSubmit(event) {
                 // 恢复提交按钮
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('processing');
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                submitBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
             });
     } else {
         // 使用普通响应
-        generateAIResponse(userMessage, mode)
+        generateAIResponse(userMessage, chatHistory, mode)
             .finally(() => {
                 // 响应完成后，移除等待提示（如果有）
                 clearTimeout(waitTimeout);
@@ -1031,7 +1031,7 @@ function handleSubmit(event) {
                 // 恢复提交按钮
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('processing');
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                submitBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
             });
     }
 }
@@ -1081,7 +1081,7 @@ function updateModeIndicator(mode) {
 }
 
 // 使用流式响应生成AI回复
-async function streamAIResponse(userMessage, mode, model = null) {
+async function streamAIResponse(userMessage, chatHistory = [], mode, model = null) {
     // 生成消息ID，用于防止重复添加
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -1547,7 +1547,8 @@ async function streamAIResponse(userMessage, mode, model = null) {
                     }));
                 }
             },
-            model
+            model,
+            chatHistory // 传入聊天历史
         );
     } catch (error) {
         console.error('调用流式API时发生错误:', error);
@@ -1933,10 +1934,15 @@ function getCurrentTime() {
 }
 
 // 生成AI响应
-async function generateAIResponse(userMessage, mode, model = null) {
+async function generateAIResponse(userMessage, chatHistory = [], mode, model = null) {
     try {
-        // 使用指定的模型调用API
-        const response = await apiService.getChatCompletion(userMessage, mode, model);
+        console.log('开始请求AI回复, 模式:', mode, '历史消息数:', chatHistory.length);
+        
+        // 显示思考动画
+        showThinkingIndicator();
+        
+        // 使用API服务获取回复
+        const response = await apiService.getChatCompletion(userMessage, chatHistory, mode, model);
         
         // 移除思考指示器
         removeThinkingIndicator();
@@ -3194,7 +3200,7 @@ function handleSpecialCommand(command) {
     }
     
     if (command.startsWith('/help')) {
-        const helpMessage = `# Origin AI 帮助指南
+        const helpMessage = `# Origin 帮助指南
 
 ## 基本功能
 - **对话**：直接输入问题或请求

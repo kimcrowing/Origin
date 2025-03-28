@@ -7,6 +7,8 @@ class ApiService {
     constructor() {
         this.config = null;
         this.isConfigLoaded = false;
+        // 定义上下文窗口大小，避免过多消息超出模型限制
+        this.maxContextMessages = 20; // 最多保留的对话轮数
     }
 
     /**
@@ -27,11 +29,12 @@ class ApiService {
     /**
      * 调用AI聊天API
      * @param {string} userMessage 用户消息
+     * @param {Array} chatHistory 聊天历史记录数组
      * @param {string} model 使用的模型，不指定则使用默认模型
      * @param {boolean} stream 是否流式响应
      * @returns {Promise<Object>} API响应结果
      */
-    async chatCompletion(userMessage, model = null, stream = false) {
+    async chatCompletion(userMessage, chatHistory = [], model = null, stream = false) {
         if (!this.isConfigLoaded || !this.config) {
             await this.init();
             if (!this.isConfigLoaded) {
@@ -40,10 +43,22 @@ class ApiService {
         }
 
         try {
+            // 准备历史消息
+            const messageHistory = chatHistory.map(msg => ({
+                role: msg.sender === 'user' ? 'user' : 'assistant',
+                content: msg.content
+            }));
+            
+            // 限制上下文窗口大小，保留最近的N条消息
+            const contextWindow = messageHistory.slice(-this.maxContextMessages);
+            
+            // 添加当前用户消息
+            contextWindow.push({ role: 'user', content: userMessage });
+            
             // 准备请求参数
             const requestBody = {
                 model: model || this.config.defaultModel,
-                messages: [{ role: 'user', content: userMessage }],
+                messages: contextWindow,
                 stream: stream
             };
 
@@ -93,10 +108,11 @@ class ApiService {
      * @param {function} onComplete 处理完成的回调
      * @param {function} onError 处理错误的回调
      * @param {string} model 使用的模型
+     * @param {Array} chatHistory 聊天历史记录
      */
-    async streamChatCompletion(userMessage, onChunk, onComplete, onError, model = null) {
+    async streamChatCompletion(userMessage, onChunk, onComplete, onError, model = null, chatHistory = []) {
         try {
-            const response = await this.chatCompletion(userMessage, model, true);
+            const response = await this.chatCompletion(userMessage, chatHistory, model, true);
             
             // 处理流式响应
             const reader = response.body.getReader();
@@ -288,14 +304,15 @@ class ApiService {
     /**
      * 聊天API的别名方法，用于与旧代码兼容
      * @param {string} userMessage 用户消息
+     * @param {Array} chatHistory 聊天历史记录数组
      * @param {string} mode 聊天模式（普通、深度或思考）
      * @param {string} customModel 自定义模型，覆盖配置中的模型
      * @returns {Promise<Object>} API响应结果
      */
-    async getChatCompletion(userMessage, mode, customModel = null) {
+    async getChatCompletion(userMessage, chatHistory = [], mode, customModel = null) {
         // 如果提供了自定义模型，则使用它
         if (customModel) {
-            return this.chatCompletion(userMessage, customModel, false);
+            return this.chatCompletion(userMessage, chatHistory, customModel, false);
         }
         
         // 否则根据模式选择适当的模型
@@ -308,7 +325,7 @@ class ApiService {
         }
         
         // 调用基础方法
-        return this.chatCompletion(userMessage, model, false);
+        return this.chatCompletion(userMessage, chatHistory, model, false);
     }
 }
 
