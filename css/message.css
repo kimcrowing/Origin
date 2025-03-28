@@ -102,7 +102,7 @@
 }
 
 .ai-message .message-content {
-    background-color: rgba(128, 128, 128, 0.12);
+    background-color: transparent;
 }
 
 /* Markdown内容格式优化 */
