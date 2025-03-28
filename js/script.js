@@ -640,7 +640,8 @@ function showWelcomeMessage() {
     // 根据登录状态显示不同的欢迎消息
     if ((!authService || !authService.isLoggedIn) && !currentUser) {
         // 未登录状态，显示登录提示
-        const welcomeMessage = `# 欢迎使用 Origin
+        /*
+        const welcomeMessage = `# 欢迎使用 Origin AI
 
 感谢您使用我们的AI对话平台！
 
@@ -650,15 +651,18 @@ function showWelcomeMessage() {
 
 如有任何问题，请随时联系我们的客服。`;
         addMessageToUI(formatMarkdown(welcomeMessage), 'ai');
+        */
     } else {
         // 已登录状态，显示欢迎消息
         const user = currentUser || authService.getCurrentUser();
+        /*
         const welcomeMessage = `# 欢迎回来，${user.name}！
 
 您已成功登录，可以开始与AI助手对话了。
 
 有什么我能帮您解答的问题吗？`;
         addMessageToUI(formatMarkdown(welcomeMessage), 'ai');
+        */
     }
     
     // 保存当前会话
@@ -883,7 +887,7 @@ function handleMenuAction(action) {
             break;
         case 'Help & Feedback':
             // 处理帮助与反馈操作
-            const helpMessage = `# Origin 帮助指南
+            const helpMessage = `# Origin AI 帮助指南
 
 ## 基本功能
 - **对话**：直接输入问题或请求
@@ -1001,7 +1005,7 @@ function handleSubmit(event) {
     // 根据模式和流式选项决定如何处理
     if (isStreamingMode) {
         // 使用流式响应
-        streamAIResponse(userMessage, chatHistory, mode)
+        streamAIResponse(userMessage, mode)
             .finally(() => {
                 // 响应完成后，移除等待提示（如果有）
                 clearTimeout(waitTimeout);
@@ -1018,7 +1022,7 @@ function handleSubmit(event) {
             });
     } else {
         // 使用普通响应
-        generateAIResponse(userMessage, chatHistory, mode)
+        generateAIResponse(userMessage, mode)
             .finally(() => {
                 // 响应完成后，移除等待提示（如果有）
                 clearTimeout(waitTimeout);
@@ -1081,7 +1085,7 @@ function updateModeIndicator(mode) {
 }
 
 // 使用流式响应生成AI回复
-async function streamAIResponse(userMessage, chatHistory = [], mode, model = null) {
+async function streamAIResponse(userMessage, mode, model = null) {
     // 生成消息ID，用于防止重复添加
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -1547,8 +1551,7 @@ async function streamAIResponse(userMessage, chatHistory = [], mode, model = nul
                     }));
                 }
             },
-            model,
-            chatHistory // 传入聊天历史
+            model
         );
     } catch (error) {
         console.error('调用流式API时发生错误:', error);
@@ -1661,7 +1664,7 @@ function formatMarkdown(markdown) {
         } else {
             // 如果之前有表格，现在结束了
             if (tableStarted) {
-                // 处理表格
+    // 处理表格
                 const tableHtml = processTable(tableRows, tableHasHeader);
                 processedLines.push(tableHtml);
                 
@@ -1840,7 +1843,7 @@ function processLists(markdown) {
     let offset = 0;
     
     for (const group of listGroups) {
-        // 构建HTML
+            // 构建HTML
         const listTag = group.isOrderedList ? 'ol' : 'ul';
         const listItems = group.items.map(item => {
             // 处理列表项内可能的HTML标记
@@ -1855,13 +1858,13 @@ function processLists(markdown) {
         // 原始文本范围
         const startPos = group.startIndex + offset;
         const endPos = group.endIndex + offset;
-        const originalText = result.substring(startPos, endPos);
-        
+            const originalText = result.substring(startPos, endPos);
+            
         // 替换
-        result = result.substring(0, startPos) + listHtml + result.substring(endPos);
-        
-        // 更新偏移量
-        offset += listHtml.length - originalText.length;
+            result = result.substring(0, startPos) + listHtml + result.substring(endPos);
+            
+            // 更新偏移量
+            offset += listHtml.length - originalText.length;
     }
     
     return result;
@@ -1898,7 +1901,7 @@ function processParagraphs(lines) {
             if (!paragraphContent) {
                 // 开始新段落
                 paragraphContent = line;
-            } else {
+        } else {
                 // 添加到现有段落，保留自然换行
                 const needsSpace = !paragraphContent.endsWith(' ') && !line.startsWith(' ');
                 paragraphContent += needsSpace ? ' ' + line : line;
@@ -1934,15 +1937,10 @@ function getCurrentTime() {
 }
 
 // 生成AI响应
-async function generateAIResponse(userMessage, chatHistory = [], mode, model = null) {
+async function generateAIResponse(userMessage, mode, model = null) {
     try {
-        console.log('开始请求AI回复, 模式:', mode, '历史消息数:', chatHistory.length);
-        
-        // 显示思考动画
-        showThinkingIndicator();
-        
-        // 使用API服务获取回复
-        const response = await apiService.getChatCompletion(userMessage, chatHistory, mode, model);
+        // 使用指定的模型调用API
+        const response = await apiService.getChatCompletion(userMessage, mode, model);
         
         // 移除思考指示器
         removeThinkingIndicator();
@@ -2762,6 +2760,7 @@ function showWelcomeUser(user) {
     createNewSession('新对话');
     
     // 显示欢迎消息
+    /*
     const welcomeMessage = `# 欢迎回来，${user.name}！
 
 您已成功登录，可以开始与AI助手对话了。
@@ -2769,6 +2768,7 @@ function showWelcomeUser(user) {
 有什么我能帮您解答的问题吗？`;
     
     addMessageToUI(formatMarkdown(welcomeMessage), 'ai');
+    */
     
     // 保存当前会话
     saveCurrentSession();
@@ -3106,89 +3106,24 @@ function handleCopyButtonClick(e) {
     // 获取纯文本
     const textToCopy = tempElement.textContent.trim();
     
-    // 显示复制成功提示函数
-    const showCopySuccess = () => {
-        const copyText = copyBtn.querySelector('.copy-text');
-        if (copyText) {
-            const originalText = copyText.textContent;
-            copyText.textContent = '已复制!';
-            
-            // 恢复原文本
-            setTimeout(() => {
-                copyText.textContent = originalText;
-            }, 2000);
-        }
-    };
-    
-    // 后备复制方法
-    const fallbackCopyToClipboard = (text) => {
-        // 创建临时文本区域元素
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        
-        // 设置样式使其不可见
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = 0;
-        textarea.style.top = '0';
-        textarea.style.left = '0';
-        
-        // 确保在移动设备上能正确工作
-        textarea.style.width = '1px';
-        textarea.style.height = '1px';
-        textarea.style.padding = 0;
-        textarea.style.border = 'none';
-        textarea.style.outline = 'none';
-        textarea.style.boxShadow = 'none';
-        textarea.style.background = 'transparent';
-        
-        // 添加到DOM
-        document.body.appendChild(textarea);
-        
-        try {
-            // 选择文本
-            textarea.focus();
-            textarea.select();
-            
-            // 兼容iOS
-            var range = document.createRange();
-            range.selectNodeContents(textarea);
-            var selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-            textarea.setSelectionRange(0, text.length);
-            
-            // 执行复制命令
-            const successful = document.execCommand('copy');
-            if (successful) {
-                console.log('内容已复制到剪贴板(fallback)');
-                showCopySuccess();
-            } else {
-                console.error('复制失败(fallback)');
+    // 复制到剪贴板
+    navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+            // 显示复制成功提示
+            const copyText = copyBtn.querySelector('.copy-text');
+            if (copyText) {
+                const originalText = copyText.textContent;
+                copyText.textContent = '已复制!';
+                
+                // 恢复原文本
+                setTimeout(() => {
+                    copyText.textContent = originalText;
+                }, 2000);
             }
-        } catch (err) {
+        })
+        .catch(err => {
             console.error('复制失败:', err);
-        }
-        
-        // 移除临时元素
-        document.body.removeChild(textarea);
-    };
-    
-    // 先尝试使用现代Clipboard API
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(textToCopy)
-            .then(() => {
-                showCopySuccess();
-            })
-            .catch(err => {
-                console.error('现代复制API失败:', err);
-                // 如果失败，使用后备方法
-                fallbackCopyToClipboard(textToCopy);
-            });
-    } else {
-        // 浏览器不支持Clipboard API，直接使用后备方法
-        console.log('浏览器不支持Clipboard API，使用后备复制方法');
-        fallbackCopyToClipboard(textToCopy);
-    }
+        });
 }
 
 // 处理特殊命令
@@ -3200,7 +3135,7 @@ function handleSpecialCommand(command) {
     }
     
     if (command.startsWith('/help')) {
-        const helpMessage = `# Origin 帮助指南
+        const helpMessage = `# Origin AI 帮助指南
 
 ## 基本功能
 - **对话**：直接输入问题或请求
