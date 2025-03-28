@@ -1487,8 +1487,8 @@ button:focus {
 
 /* 管理员样式 */
 .admin-user {
-    background-color: var(--accent-blue) !important;
-    color: white !important;
+    /* 移除背景色设置 */
+    background-color: transparent !important;
 }
 
 .admin-entry {
@@ -1936,5 +1936,14 @@ button:focus {
 
 /* 管理员用户的图标颜色 */
 .admin-user .logo-svg {
-    color: #4a7bff; /* 管理员用户使用蓝色 */
+    color: #4a7bff !important; /* 管理员用户使用蓝色填充 */
+}
+
+/* 确保在暗色和浅色主题下都正确显示 */
+.light-theme .admin-user .logo-svg {
+    color: #4a7bff !important; /* 浅色主题下仍然使用蓝色 */
+}
+
+.dark-theme-enforced .admin-user .logo-svg {
+    color: #4a7bff !important; /* 强制暗色主题下仍然使用蓝色 */
 } 
