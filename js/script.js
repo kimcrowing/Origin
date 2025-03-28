@@ -1042,6 +1042,10 @@ function handleSubmit(event) {
 
 // 更新模式指示器
 function updateModeIndicator(mode) {
+    // 不再显示模式指示器，保留空函数以兼容现有代码调用
+    return;
+    
+    /* 原有代码已移除
     // 移除现有的模式指示器
     const existingIndicator = document.querySelector('.mode-indicator');
     if (existingIndicator) {
@@ -1082,6 +1086,7 @@ function updateModeIndicator(mode) {
             indicator.remove();
         }, 300);
     }, 2000);
+    */
 }
 
 // 使用流式响应生成AI回复
