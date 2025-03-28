@@ -1014,7 +1014,7 @@ function handleSubmit(event) {
                 // 恢复提交按钮
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('processing');
-                submitBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
             });
     } else {
         // 使用普通响应
@@ -1031,7 +1031,7 @@ function handleSubmit(event) {
                 // 恢复提交按钮
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('processing');
-                submitBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
             });
     }
 }
