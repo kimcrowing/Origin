@@ -374,7 +374,7 @@ function renderSessionList(searchTerm = '') {
         }
         
         sessionItem.innerHTML = `
-            <i class="fas fa-comment history-item-icon"></i>
+            <i class="fas fa-clock history-item-icon"></i>
             <div class="history-item-content">
                 <div class="history-item-title">${escapeHtml(session.title)}</div>
                 <div class="history-item-time">${lastUpdatedDisplay} · ${escapeHtml(previewText)}</div>
