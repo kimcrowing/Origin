@@ -1926,17 +1926,23 @@ button:focus {
 
 /* 用户头像SVG图标样式 */
 .logo-svg {
-    color: white; /* 默认颜色为白色，适用于深色主题 */
+    color: white; /* 暗色主题下默认为白色 */
     transition: color 0.3s ease;
 }
 
+/* 浅色主题下的用户图标 */
 .light-theme .logo-svg {
-    color: #333; /* 浅色主题使用深色图标 */
+    color: #333; /* 浅色主题下默认为暗色 */
 }
 
 /* 管理员用户的图标颜色 */
 .admin-user .logo-svg {
     color: #4a7bff !important; /* 管理员用户使用蓝色填充 */
+}
+
+/* 普通用户的图标颜色 */
+.normal-user .logo-svg {
+    color: #a64aff !important; /* 普通用户使用紫色填充 */
 }
 
 /* 确保在暗色和浅色主题下都正确显示 */
@@ -1946,4 +1952,8 @@ button:focus {
 
 .dark-theme-enforced .admin-user .logo-svg {
     color: #4a7bff !important; /* 强制暗色主题下仍然使用蓝色 */
+}
+
+.dark-theme-enforced .normal-user .logo-svg {
+    color: #a64aff !important; /* 强制暗色主题下仍然使用紫色 */
 } 
