@@ -27,6 +27,14 @@ class ThinkModeService {
     thinkBtn.addEventListener('click', (e) => {
       e.preventDefault();
       
+      // 首先检查是否为管理员用户
+      if (authService.isAdmin()) {
+        // 管理员可以直接使用Think模式
+        this.openThinkMode();
+        return;
+      }
+      
+      // 非管理员需要登录
       if (!authService.isLoggedIn) {
         app.showMessage('请先登录后使用Think模式', 'warning');
         return;
@@ -43,7 +51,39 @@ class ThinkModeService {
   
   // 打开Think模式
   openThinkMode() {
-    // 如果没有登录或离线，不允许开启
+    // 如果是管理员用户，直接允许使用
+    if (authService.isAdmin()) {
+      const thinkBtn = document.querySelector('.think-btn');
+      
+      // 创建或显示Think模式弹窗
+      if (!this.container) {
+        this.createThinkModeDialog();
+        this.isActive = true;
+        thinkBtn.classList.add('active');
+        console.log('Think模式: 已创建并开启 (管理员)');
+      } else {
+        if (this.container.style.display === 'none') {
+          this.container.style.display = 'block';
+          this.isActive = true;
+          thinkBtn.classList.add('active');
+          console.log('Think模式: 已开启 (管理员)');
+        } else {
+          this.container.style.display = 'none';
+          this.isActive = false;
+          thinkBtn.classList.remove('active');
+          console.log('Think模式: 已关闭');
+          return;
+        }
+      }
+      
+      if (!this.initialized) {
+        this.setupThinkEvents();
+        this.initialized = true;
+      }
+      return;
+    }
+    
+    // 普通用户需要登录和在线状态
     if (!authService.isLoggedIn || !authService.isOnline) {
       console.log('Think模式: 未登录或离线状态，无法开启');
       return;
