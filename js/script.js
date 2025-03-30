@@ -3277,42 +3277,45 @@ async function processFile(file) {
         // 存储文档内容以供Think模式使用
         app.uploadedDocumentContent = content;
         
-        // 检查是否包含专利相关关键词
-        const contentType = detectContentType(content);
-        
-        if (contentType === 'patent_review') {
-            // 显示系统提示消息
-            showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
+        // 检查思考模式是否开启
+        if (thinkModeService && thinkModeService.isActive) {
+            // 思考模式开启，进行内容类型识别
+            const contentType = detectContentType(content);
             
-            // 识别技术领域
-            const field = thinkModeService.recognizeField(content);
-            console.log('识别的技术领域:', field);
-            
-            // 加载专利答审模式的提示词并替换字段
-            let prompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
-            
-            // 发送提示词和文件内容给AI
-            await sendMessage(prompt + '\n\n审查意见通知书内容：\n' + content);
-        } else if (contentType === 'patent_writing') {
-            // 显示系统提示消息
-            showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
-            
-            // 识别技术领域
-            const field = thinkModeService.recognizeField(content);
-            console.log('识别的技术领域:', field);
-            
-            // 加载专利撰写模式的提示词
-            const prompt = PATENT_WRITING_PROMPT;
-            
-            // 发送提示词和文件内容给AI
-            await sendMessage(prompt + '\n\n技术内容：\n' + content);
-        } else {
-            // 显示普通文件上传提示
-            showSystemMessage('已上传文件，正在分析内容...');
-            
-            // 发送文件内容给AI
-            await sendMessage('请分析以下文件内容：\n\n' + content);
+            if (contentType === 'patent_review') {
+                // 显示系统提示消息
+                showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
+                
+                // 识别技术领域
+                const field = thinkModeService.recognizeField(content);
+                console.log('识别的技术领域:', field);
+                
+                // 加载专利答审模式的提示词并替换字段
+                let prompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
+                
+                // 发送提示词和文件内容给AI
+                await sendMessage(prompt + '\n\n审查意见通知书内容：\n' + content);
+                return;
+            } else if (contentType === 'patent_writing') {
+                // 显示系统提示消息
+                showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
+                
+                // 识别技术领域
+                const field = thinkModeService.recognizeField(content);
+                console.log('识别的技术领域:', field);
+                
+                // 加载专利撰写模式的提示词
+                const prompt = PATENT_WRITING_PROMPT;
+                
+                // 发送提示词和文件内容给AI
+                await sendMessage(prompt + '\n\n技术内容：\n' + content);
+                return;
+            }
         }
+        
+        // 思考模式未开启或未识别出特定内容类型，使用普通处理
+        showSystemMessage('已上传文件，正在分析内容...');
+        await sendMessage('请分析以下文件内容：\n\n' + content);
     } catch (error) {
         console.error('文件处理错误:', error);
         showSystemMessage('文件处理失败：' + error.message);
@@ -3399,66 +3402,83 @@ async function handleSubmit(event) {
     // 禁用输入
     disableInput();
     
-    // 检测内容类型并选择合适的提示词
-    const contentType = detectContentType(userInput);
-    
     // 保存为app.uploadedDocumentContent以供Think模式使用
     app.uploadedDocumentContent = userInput;
     
-    // 根据检测到的内容类型，应用不同的处理逻辑
-    if (contentType === 'patent_review' && !inPatentReviewMode) {
-        // 切换到专利答审模式
-        inPatentReviewMode = true;
-        inPatentWritingMode = false;
+    // 检查思考模式是否开启
+    if (thinkModeService && thinkModeService.isActive) {
+        // 思考模式开启，进行内容类型检测
+        const contentType = detectContentType(userInput);
         
-        // 显示模式切换提示
-        showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
-        
-        // 识别技术领域
-        const field = thinkModeService.recognizeField(userInput);
-        
-        // 应用专利答审提示词
-        let systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
-        
-        try {
-            await streamAIResponse(userInput, 'patent_review', currentModel, systemPrompt);
-        } catch (error) {
-            console.error('AI响应错误:', error);
-            showSystemMessage('生成响应时出错: ' + error.message);
+        if (contentType === 'patent_review' && !inPatentReviewMode) {
+            // 切换到专利答审模式
+            inPatentReviewMode = true;
+            inPatentWritingMode = false;
+            
+            // 显示模式切换提示
+            showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
+            
+            // 识别技术领域
+            const field = thinkModeService.recognizeField(userInput);
+            
+            // 应用专利答审提示词
+            let systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
+            
+            try {
+                await streamAIResponse(userInput, 'patent_review', currentModel, systemPrompt);
+            } catch (error) {
+                console.error('AI响应错误:', error);
+                showSystemMessage('生成响应时出错: ' + error.message);
+            }
+            
+            // 启用输入
+            enableInput();
+            
+            // 保存会话
+            saveCurrentSession();
+            return;
+        } else if (contentType === 'patent_writing' && !inPatentWritingMode) {
+            // 切换到专利撰写模式
+            inPatentWritingMode = true;
+            inPatentReviewMode = false;
+            
+            // 显示模式切换提示
+            showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
+            
+            // 应用专利撰写提示词
+            let systemPrompt = PATENT_WRITING_PROMPT;
+            
+            try {
+                await streamAIResponse(userInput, 'patent_writing', currentModel, systemPrompt);
+            } catch (error) {
+                console.error('AI响应错误:', error);
+                showSystemMessage('生成响应时出错: ' + error.message);
+            }
+            
+            // 启用输入
+            enableInput();
+            
+            // 保存会话
+            saveCurrentSession();
+            return;
         }
-    } else if (contentType === 'patent_writing' && !inPatentWritingMode) {
-        // 切换到专利撰写模式
-        inPatentWritingMode = true;
-        inPatentReviewMode = false;
-        
-        // 显示模式切换提示
-        showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
-        
-        // 应用专利撰写提示词
-        let systemPrompt = PATENT_WRITING_PROMPT;
-        
-        try {
-            await streamAIResponse(userInput, 'patent_writing', currentModel, systemPrompt);
-        } catch (error) {
-            console.error('AI响应错误:', error);
-            showSystemMessage('生成响应时出错: ' + error.message);
-        }
-    } else {
-        // 普通对话模式或继续现有模式
-        let mode = 'chat';
-        
-        if (inPatentReviewMode) {
-            mode = 'patent_review';
-        } else if (inPatentWritingMode) {
-            mode = 'patent_writing';
-        }
-        
-        try {
-            await streamAIResponse(userInput, mode, currentModel);
-        } catch (error) {
-            console.error('AI响应错误:', error);
-            showSystemMessage('生成响应时出错: ' + error.message);
-        }
+    }
+    
+    // 思考模式未开启或未识别出特定内容类型，使用普通处理
+    // 普通对话模式或继续现有模式
+    let mode = 'chat';
+    
+    if (inPatentReviewMode) {
+        mode = 'patent_review';
+    } else if (inPatentWritingMode) {
+        mode = 'patent_writing';
+    }
+    
+    try {
+        await streamAIResponse(userInput, mode, currentModel);
+    } catch (error) {
+        console.error('AI响应错误:', error);
+        showSystemMessage('生成响应时出错: ' + error.message);
     }
     
     // 启用输入
