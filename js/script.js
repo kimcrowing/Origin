@@ -1006,8 +1006,9 @@ function handleSubmit(event) {
         event.preventDefault();
     }
     
-    // 检查用户是否已登录
-    if ((!authService || !authService.isLoggedIn) && !currentUser) {
+    // 修改登录检查逻辑 - 使用更宽松的条件，只要任一条件满足即可通过
+    const isUserLoggedIn = authService?.isLoggedIn || currentUser;
+    if (!isUserLoggedIn) {
         // 显示登录提示信息
         addMessageToUI("请先登录后再使用AI对话功能。", "ai");
         // 显示登录弹窗

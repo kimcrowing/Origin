@@ -27,14 +27,17 @@ class ThinkModeService {
     thinkBtn.addEventListener('click', (e) => {
       e.preventDefault();
       
+      // 使用更宽松的登录检查方式
+      const isUserLoggedIn = authService?.isLoggedIn || window.currentUser;
+      
       // 首先检查是否已登录
-      if (!authService.isLoggedIn) {
+      if (!isUserLoggedIn) {
         app.showMessage('请先登录后使用功能', 'warning');
         return;
       }
       
       // 检查是否有高级访问权限（管理员或pro用户）
-      if (authService.hasAdvancedAccess()) {
+      if (authService?.hasAdvancedAccess() || (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'pro'))) {
         // 有权限直接切换Think模式
         this.toggleThinkMode();
         return;
@@ -53,8 +56,11 @@ class ThinkModeService {
   
   // 切换Think模式状态
   toggleThinkMode() {
+    // 使用更宽松的登录检查方式
+    const isUserLoggedIn = authService?.isLoggedIn || window.currentUser;
+    
     // 确保用户已登录
-    if (!authService.isLoggedIn) {
+    if (!isUserLoggedIn) {
       console.log('Think模式: 未登录状态，无法开启');
       return;
     }
@@ -150,8 +156,11 @@ class ThinkModeService {
   
   // 自动执行Think分析
   async performAutoAnalysis(content, technicalField) {
+    // 使用更宽松的登录检查方式
+    const isUserLoggedIn = authService?.isLoggedIn || window.currentUser;
+    
     // 检查登录状态
-    if (!authService.isLoggedIn) {
+    if (!isUserLoggedIn) {
       app.showMessage('请先登录后使用Think分析功能', 'error');
       return;
     }
