@@ -642,7 +642,7 @@ button:focus {
     margin-right: 10px;
     height: 28px;
     background-color: transparent;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .think-btn:hover {
@@ -652,6 +652,18 @@ button:focus {
 .think-btn i {
     margin-right: 6px;
     font-size: 12px;
+    color: var(--secondary-text);
+    transition: color 0.2s ease;
+}
+
+/* Think按钮活跃状态 */
+.think-btn.active {
+  background-color: transparent;
+}
+
+.think-btn.active i,
+.think-btn.active span {
+  color: #4a7bff;
 }
 
 .model-selector {
@@ -1956,17 +1968,6 @@ button:focus {
 
 .dark-theme-enforced .normal-user .logo-svg {
     color: #a64aff !important; /* 强制暗色主题下仍然使用紫色 */
-}
-
-/* Think按钮活跃状态 */
-.think-btn.active {
-  background-color: #4a6bff;
-  color: white;
-}
-
-.think-btn.active i,
-.think-btn.active span {
-  color: white;
 }
 
 /* 添加自动识别时的提示样式 */

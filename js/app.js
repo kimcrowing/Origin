@@ -126,7 +126,7 @@ class App {
   }
   
   // 显示内容类型指示器
-  showContentTypeIndicator(contentType) {
+  showContentTypeIndicator(contentType, field = null) {
     // 移除现有指示器
     this.removeContentTypeIndicator();
     
@@ -144,9 +144,11 @@ class App {
       icon = 'feather';
     }
     
+    let fieldText = field ? ` (${field})` : '';
+    
     indicator.innerHTML = `
       <i class="fas fa-${icon}"></i>
-      <span>已识别为${contentType.name}</span>
+      <span>已识别为${contentType.name}${fieldText}</span>
     `;
     
     document.body.appendChild(indicator);
