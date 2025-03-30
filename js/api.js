@@ -9,6 +9,7 @@ class ApiService {
         this.isConfigLoaded = false;
         // 定义上下文窗口大小，避免过多消息超出模型限制
         this.maxContextMessages = 20; // 最多保留的对话轮数
+        this.systemPrompt = null; // 添加系统提示词属性
     }
 
     /**
@@ -24,6 +25,25 @@ class ApiService {
             console.error('API服务初始化失败:', error);
             this.isConfigLoaded = false;
         }
+    }
+
+    /**
+     * 设置系统提示词
+     * @param {string} prompt 系统提示词
+     */
+    setSystemPrompt(prompt) {
+        this.systemPrompt = prompt;
+        console.log('已设置系统提示词:', prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''));
+        return true;
+    }
+    
+    /**
+     * 清除系统提示词
+     */
+    clearSystemPrompt() {
+        this.systemPrompt = null;
+        console.log('已清除系统提示词');
+        return true;
     }
 
     /**
@@ -54,6 +74,14 @@ class ApiService {
             
             // 添加当前用户消息
             contextWindow.push({ role: 'user', content: userMessage });
+            
+            // 如果有设置系统提示词，添加到消息开头
+            if (this.systemPrompt) {
+                contextWindow.unshift({
+                    role: 'system',
+                    content: this.systemPrompt
+                });
+            }
             
             // 准备请求参数
             const requestBody = {

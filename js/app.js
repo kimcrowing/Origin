@@ -124,6 +124,46 @@ class App {
       }, 500);
     }, 3000);
   }
+  
+  // 显示内容类型指示器
+  showContentTypeIndicator(contentType) {
+    // 移除现有指示器
+    this.removeContentTypeIndicator();
+    
+    if (!contentType) return;
+    
+    // 创建新指示器
+    const indicator = document.createElement('div');
+    indicator.className = 'content-type-indicator';
+    indicator.id = 'content-type-indicator';
+    
+    let icon = 'lightbulb';
+    if (contentType.type === 'patent_review') {
+      icon = 'gavel';
+    } else if (contentType.type === 'patent_writing') {
+      icon = 'feather';
+    }
+    
+    indicator.innerHTML = `
+      <i class="fas fa-${icon}"></i>
+      <span>已识别为${contentType.name}</span>
+    `;
+    
+    document.body.appendChild(indicator);
+    
+    // 3秒后自动消失
+    setTimeout(() => {
+      this.removeContentTypeIndicator();
+    }, 3000);
+  }
+  
+  // 移除内容类型指示器
+  removeContentTypeIndicator() {
+    const existingIndicator = document.getElementById('content-type-indicator');
+    if (existingIndicator) {
+      existingIndicator.remove();
+    }
+  }
 }
 
 // 当文档加载完成时初始化应用

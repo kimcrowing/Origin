@@ -1956,4 +1956,41 @@ button:focus {
 
 .dark-theme-enforced .normal-user .logo-svg {
     color: #a64aff !important; /* 强制暗色主题下仍然使用紫色 */
+}
+
+/* Think按钮活跃状态 */
+.think-btn.active {
+  background-color: #4a6bff;
+  color: white;
+}
+
+.think-btn.active i,
+.think-btn.active span {
+  color: white;
+}
+
+/* 添加自动识别时的提示样式 */
+.content-type-indicator {
+  position: absolute;
+  bottom: 65px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 100;
+  animation: fadeIn 0.3s ease;
+}
+
+.content-type-indicator i {
+  font-size: 14px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 } 

@@ -337,4 +337,52 @@ function generateEncryptedConfigFile(apiKey) {
         }
     };
     return JSON.stringify(config, null, 2);
+}
+
+/**
+ * 加密提示词数据
+ * @param {Object} promptsData 提示词数据对象
+ * @returns {string} 加密后的提示词数据
+ */
+function encryptPrompts(promptsData) {
+    try {
+        const json = JSON.stringify(promptsData);
+        return encryptAES(json, ENCRYPTION_KEY);
+    } catch (error) {
+        console.error('加密提示词数据出错:', error);
+        throw error;
+    }
+}
+
+/**
+ * 解密提示词数据
+ * @param {string} encryptedData 加密后的提示词数据
+ * @returns {Object} 解密后的提示词数据对象
+ */
+function decryptPrompts(encryptedData) {
+    try {
+        const decrypted = decryptAES(encryptedData, ENCRYPTION_KEY);
+        return JSON.parse(decrypted);
+    } catch (error) {
+        console.error('解密提示词数据出错:', error);
+        return null;
+    }
+}
+
+/**
+ * 加载提示词配置
+ * @returns {Promise<Object>} 提示词配置对象
+ */
+async function loadPromptsConfig() {
+    try {
+        // 使用相对路径
+        const response = await fetch('data/prompts.json');
+        if (!response.ok) {
+            throw new Error('无法加载提示词配置');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('加载提示词配置失败:', error);
+        return null;
+    }
 } 
