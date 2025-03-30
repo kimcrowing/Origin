@@ -301,6 +301,14 @@
     transform: scale(1);
 }
 
+/* 触摸操作时显示复制按钮 */
+.message-content:active .copy-btn,
+.message-content:focus .copy-btn,
+.message-content:focus-within .copy-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .copy-btn:hover {
     background-color: rgba(128, 128, 128, 0.25);
     transform: scale(1.05);
@@ -411,7 +419,7 @@
     }
     
     .copy-btn {
-        opacity: 0.8;
+        opacity: 0;
         bottom: 8px;
         right: 8px;
         min-width: 28px;

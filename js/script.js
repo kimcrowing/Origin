@@ -178,6 +178,55 @@ function init() {
     
     // 复制按钮事件委托
     document.addEventListener('click', handleCopyButtonClick);
+    
+    // 移动端复制按钮交互优化
+    initMobileCopyButtonInteraction();
+}
+
+// 初始化移动端复制按钮交互
+function initMobileCopyButtonInteraction() {
+    // 检测是否为移动设备
+    const isMobile = window.innerWidth <= 768 || 
+                     navigator.userAgent.match(/Android/i) || 
+                     navigator.userAgent.match(/iPhone|iPad|iPod/i);
+    
+    if (isMobile) {
+        // 为消息容器添加点击事件，处理移动端显示复制按钮
+        messagesContainer.addEventListener('click', function(e) {
+            // 找到被点击的消息内容元素
+            const messageContent = e.target.closest('.message-content');
+            if (!messageContent) return;
+            
+            // 隐藏其他所有消息的复制按钮
+            const allCopyButtons = document.querySelectorAll('.copy-btn');
+            allCopyButtons.forEach(btn => {
+                if (!messageContent.contains(btn)) {
+                    btn.style.opacity = '0';
+                }
+            });
+            
+            // 显示当前消息的复制按钮
+            const currentCopyBtn = messageContent.querySelector('.copy-btn');
+            if (currentCopyBtn) {
+                currentCopyBtn.style.opacity = '1';
+                
+                // 5秒后自动隐藏
+                setTimeout(() => {
+                    currentCopyBtn.style.opacity = '0';
+                }, 5000);
+            }
+        });
+        
+        // 点击页面空白处隐藏所有复制按钮
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.message-content')) {
+                const allCopyButtons = document.querySelectorAll('.copy-btn');
+                allCopyButtons.forEach(btn => {
+                    btn.style.opacity = '0';
+                });
+            }
+        });
+    }
 }
 
 // 初始化历史会话菜单
