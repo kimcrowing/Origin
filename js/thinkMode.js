@@ -67,8 +67,8 @@ class ThinkModeService {
       this.isActive = true;
       thinkBtn.classList.add('active');
       
-      // 通知用户
-      app.showMessage('思考模式已开启，系统将自动分析内容', 'info');
+      // 移除用户通知，仅记录日志
+      // app.showMessage('思考模式已开启，系统将自动分析内容', 'info');
       
       // 分析当前内容
       this.analyzeCurrentContent();
@@ -79,8 +79,8 @@ class ThinkModeService {
       this.isActive = false;
       thinkBtn.classList.remove('active');
       
-      // 通知用户
-      app.showMessage('思考模式已关闭', 'info');
+      // 移除用户通知，仅记录日志
+      // app.showMessage('思考模式已关闭', 'info');
       
       console.log('Think模式: 已关闭');
     }
@@ -217,18 +217,18 @@ class ThinkModeService {
         
         // 添加AI分析结果
         addMessageToUI(analysisResult, 'ai');
-        
-        // 保存会话
-        if (typeof saveCurrentSession === 'function') {
-          saveCurrentSession();
-        }
-        
+                  
+                  // 保存会话
+                  if (typeof saveCurrentSession === 'function') {
+                    saveCurrentSession();
+                  }
+                  
         app.showMessage('深度分析完成', 'success');
-      } else {
+                } else {
         app.showMessage('分析完成，但无法显示结果', 'warning');
-      }
-      
-      // 保存分析记录
+          }
+          
+          // 保存分析记录
       this.saveThinkResult(content, systemPrompt, analysisResult);
       
     } catch (error) {
