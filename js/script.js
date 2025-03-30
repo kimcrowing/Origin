@@ -1032,6 +1032,11 @@ function handleSubmit(event) {
         }
     }
     
+    // 保存消息以便Think模式使用
+    if (app && typeof app.uploadedDocumentContent !== 'undefined') {
+        app.uploadedDocumentContent = userMessage;
+    }
+    
     // 添加用户消息到UI前禁用提交按钮
     submitBtn.disabled = true;
     submitBtn.classList.add('processing');
@@ -1062,6 +1067,36 @@ function handleSubmit(event) {
         mode = 'think';
     }
     
+    // 如果思考模式开启，检查是否需要识别内容类型
+    let contentType = null;
+    let technicalField = null;
+    
+    if (thinkModeService && thinkModeService.isActive && mode === 'think') {
+        // 检测内容类型
+        contentType = detectContentType(userMessage);
+        
+        // 如果检测到特定内容类型，更新模式
+        if (contentType === 'patent_review') {
+            mode = 'patent_review';
+            console.log('检测到专利答审内容，切换到专利答审模式');
+            showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
+            inPatentReviewMode = true;
+            inPatentWritingMode = false;
+            
+            // 识别技术领域
+            technicalField = thinkModeService.recognizeField(userMessage);
+        } else if (contentType === 'patent_writing') {
+            mode = 'patent_writing';
+            console.log('检测到专利撰写内容，切换到专利撰写模式');
+            showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
+            inPatentWritingMode = true;
+            inPatentReviewMode = false;
+            
+            // 识别技术领域
+            technicalField = thinkModeService.recognizeField(userMessage);
+        }
+    }
+    
     console.log('当前模式:', mode, '流式响应:', isStreamingMode);
     
     // 更新UI以反映当前模式
@@ -1089,10 +1124,22 @@ function handleSubmit(event) {
         }
     }, 5000); // 5秒后显示等待提示
     
+    // 准备系统提示词
+    let systemPrompt = null;
+    
+    // 根据模式和内容类型设置系统提示词
+    if (mode === 'patent_review' && technicalField) {
+        // 专利答审提示词
+        systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", technicalField || "一般技术");
+    } else if (mode === 'patent_writing') {
+        // 专利撰写提示词
+        systemPrompt = PATENT_WRITING_PROMPT;
+    }
+    
     // 根据模式和流式选项决定如何处理
     if (isStreamingMode) {
         // 使用流式响应
-        streamAIResponse(userMessage, mode)
+        streamAIResponse(userMessage, mode, currentModel, systemPrompt)
             .finally(() => {
                 // 响应完成后，移除等待提示（如果有）
                 clearTimeout(waitTimeout);
@@ -1106,10 +1153,13 @@ function handleSubmit(event) {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('processing');
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                
+                // 保存会话
+                saveCurrentSession();
             });
     } else {
         // 使用普通响应
-        generateAIResponse(userMessage, mode)
+        generateAIResponse(userMessage, mode, currentModel, systemPrompt)
             .finally(() => {
                 // 响应完成后，移除等待提示（如果有）
                 clearTimeout(waitTimeout);
@@ -1123,6 +1173,9 @@ function handleSubmit(event) {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('processing');
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                
+                // 保存会话
+                saveCurrentSession();
             });
     }
 }
@@ -1177,7 +1230,7 @@ function updateModeIndicator(mode) {
 }
 
 // 使用流式响应生成AI回复
-async function streamAIResponse(userMessage, mode, model = null) {
+async function streamAIResponse(userMessage, mode, model = null, systemPrompt = null) {
     // 生成消息ID，用于防止重复添加
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -2029,10 +2082,10 @@ function getCurrentTime() {
 }
 
 // 生成AI响应
-async function generateAIResponse(userMessage, mode, model = null) {
+async function generateAIResponse(userMessage, mode, model = null, systemPrompt = null) {
     try {
         // 使用指定的模型调用API
-        const response = await apiService.getChatCompletion(userMessage, mode, model);
+        const response = await apiService.getChatCompletion(userMessage, mode, model, systemPrompt);
         
         // 移除思考指示器
         removeThinkingIndicator();
@@ -3283,7 +3336,7 @@ async function processFile(file) {
             const contentType = detectContentType(content);
             
             if (contentType === 'patent_review') {
-                // 显示系统提示消息
+            // 显示系统提示消息
                 showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
                 
                 // 识别技术领域
@@ -3292,9 +3345,9 @@ async function processFile(file) {
                 
                 // 加载专利答审模式的提示词并替换字段
                 let prompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
-                
-                // 发送提示词和文件内容给AI
-                await sendMessage(prompt + '\n\n审查意见通知书内容：\n' + content);
+            
+            // 发送提示词和文件内容给AI
+            await sendMessage(prompt + '\n\n审查意见通知书内容：\n' + content);
                 return;
             } else if (contentType === 'patent_writing') {
                 // 显示系统提示消息
@@ -3380,112 +3433,6 @@ function detectContentType(content) {
     }
     
     return 'general';
-}
-
-// 处理聊天输入
-async function handleSubmit(event) {
-    event.preventDefault();
-    const userInput = chatInput.value.trim();
-    
-    if (!userInput) return;
-    
-    // 保存当前输入用于重试
-    lastUserMessage = userInput;
-    
-    // 重置输入框
-    chatInput.value = '';
-    resetTextareaHeight();
-    
-    // 添加用户消息到UI
-    addMessageToUI(userInput, 'user');
-    
-    // 禁用输入
-    disableInput();
-    
-    // 保存为app.uploadedDocumentContent以供Think模式使用
-    app.uploadedDocumentContent = userInput;
-    
-    // 检查思考模式是否开启
-    if (thinkModeService && thinkModeService.isActive) {
-        // 思考模式开启，进行内容类型检测
-        const contentType = detectContentType(userInput);
-        
-        if (contentType === 'patent_review' && !inPatentReviewMode) {
-            // 切换到专利答审模式
-            inPatentReviewMode = true;
-            inPatentWritingMode = false;
-            
-            // 显示模式切换提示
-            showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
-            
-            // 识别技术领域
-            const field = thinkModeService.recognizeField(userInput);
-            
-            // 应用专利答审提示词
-            let systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
-            
-            try {
-                await streamAIResponse(userInput, 'patent_review', currentModel, systemPrompt);
-            } catch (error) {
-                console.error('AI响应错误:', error);
-                showSystemMessage('生成响应时出错: ' + error.message);
-            }
-            
-            // 启用输入
-            enableInput();
-            
-            // 保存会话
-            saveCurrentSession();
-            return;
-        } else if (contentType === 'patent_writing' && !inPatentWritingMode) {
-            // 切换到专利撰写模式
-            inPatentWritingMode = true;
-            inPatentReviewMode = false;
-            
-            // 显示模式切换提示
-            showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
-            
-            // 应用专利撰写提示词
-            let systemPrompt = PATENT_WRITING_PROMPT;
-            
-            try {
-                await streamAIResponse(userInput, 'patent_writing', currentModel, systemPrompt);
-            } catch (error) {
-                console.error('AI响应错误:', error);
-                showSystemMessage('生成响应时出错: ' + error.message);
-            }
-            
-            // 启用输入
-            enableInput();
-            
-            // 保存会话
-            saveCurrentSession();
-            return;
-        }
-    }
-    
-    // 思考模式未开启或未识别出特定内容类型，使用普通处理
-    // 普通对话模式或继续现有模式
-    let mode = 'chat';
-    
-    if (inPatentReviewMode) {
-        mode = 'patent_review';
-    } else if (inPatentWritingMode) {
-        mode = 'patent_writing';
-    }
-    
-    try {
-        await streamAIResponse(userInput, mode, currentModel);
-    } catch (error) {
-        console.error('AI响应错误:', error);
-        showSystemMessage('生成响应时出错: ' + error.message);
-    }
-    
-    // 启用输入
-    enableInput();
-    
-    // 保存会话
-    saveCurrentSession();
 }
 
 // 当页面加载完成时初始化
@@ -3658,3 +3605,27 @@ function setScrollbarWidthVariable() {
     document.documentElement.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
     console.log('滚动条宽度:', scrollbarWidth);
 } 
+
+// 禁用输入框和按钮，在发送消息过程中防止用户输入
+function disableInput() {
+    if (chatInput) {
+        chatInput.disabled = true;
+        chatInput.placeholder = "AI正在思考中...";
+    }
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('disabled');
+    }
+}
+
+// 启用输入框和按钮，消息处理完成后恢复用户输入
+function enableInput() {
+    if (chatInput) {
+        chatInput.disabled = false;
+        chatInput.placeholder = "输入消息...";
+    }
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('disabled');
+    }
+}
