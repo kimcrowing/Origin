@@ -35,8 +35,8 @@ class ThinkModeService {
       
       // 检查是否有高级访问权限（管理员或pro用户）
       if (authService.hasAdvancedAccess()) {
-        // 有权限直接使用Think模式
-        this.openThinkMode();
+        // 有权限直接切换Think模式
+        this.toggleThinkMode();
         return;
       }
       
@@ -47,130 +47,109 @@ class ThinkModeService {
       }
       
       // 普通用户继续使用Think模式
-      this.openThinkMode();
+      this.toggleThinkMode();
     });
   }
   
-  // 打开Think模式
-  openThinkMode() {
+  // 切换Think模式状态
+  toggleThinkMode() {
     // 确保用户已登录
     if (!authService.isLoggedIn) {
       console.log('Think模式: 未登录状态，无法开启');
       return;
     }
     
-    // 如果是管理员或pro用户，直接允许使用
-    const isAdvancedUser = authService.hasAdvancedAccess();
     const thinkBtn = document.querySelector('.think-btn');
     
-    // 创建或显示Think模式弹窗
-    if (!this.container) {
-      this.createThinkModeDialog();
+    // 切换状态
+    if (!this.isActive) {
+      // 激活思考模式
       this.isActive = true;
       thinkBtn.classList.add('active');
-      console.log(`Think模式: 已创建并开启 ${isAdvancedUser ? '(高级用户)' : ''}`);
+      
+      // 通知用户
+      app.showMessage('思考模式已开启，系统将自动分析内容', 'info');
+      
+      // 分析当前内容
+      this.analyzeCurrentContent();
+      
+      console.log('Think模式: 已开启');
     } else {
-      if (this.container.style.display === 'none') {
-        this.container.style.display = 'block';
-        this.isActive = true;
-        thinkBtn.classList.add('active');
-        console.log(`Think模式: 已开启 ${isAdvancedUser ? '(高级用户)' : ''}`);
+      // 关闭思考模式
+      this.isActive = false;
+      thinkBtn.classList.remove('active');
+      
+      // 通知用户
+      app.showMessage('思考模式已关闭', 'info');
+      
+      console.log('Think模式: 已关闭');
+    }
+  }
+  
+  // 分析当前内容（上传文档或聊天框内容）
+  analyzeCurrentContent() {
+    try {
+      let contentToAnalyze = '';
+      
+      // 尝试获取上传的文档内容
+      const uploadedContent = this.getUploadedDocumentContent();
+      if (uploadedContent) {
+        contentToAnalyze = uploadedContent;
+        console.log('Think模式: 分析上传文档内容');
       } else {
-        this.container.style.display = 'none';
-        this.isActive = false;
-        thinkBtn.classList.remove('active');
-        console.log('Think模式: 已关闭');
-        return;
-      }
-    }
-    
-    if (!this.initialized) {
-      this.setupThinkEvents();
-      this.initialized = true;
-    }
-  }
-  
-  // 创建Think模式对话框
-  createThinkModeDialog() {
-    // 创建对话框容器
-    this.container = document.createElement('div');
-    this.container.className = 'think-dialog';
-    this.container.innerHTML = `
-      <div class="think-dialog-content">
-        <div class="think-dialog-header">
-          <h3>Think深度分析模式</h3>
-          <button class="think-close-btn"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="think-dialog-body">
-          <p class="think-description">
-            Think模式提供深度分析和推理，帮助解决复杂问题。
-            输入您的问题，系统将进行综合分析并提供详细解答。
-          </p>
-          <div class="think-input-container">
-            <textarea id="think-input" placeholder="输入复杂问题进行深度分析..."></textarea>
-          </div>
-          <div class="think-controls">
-            <button id="think-submit-btn" class="btn btn-primary">
-              <i class="fas fa-brain"></i> 开始分析
-            </button>
-            <label class="think-option">
-              <input type="checkbox" id="think-show-process" checked>
-              展示思考过程
-            </label>
-          </div>
-          <div id="think-result-area" class="think-result-area">
-            <div class="think-placeholder">您的分析结果将显示在这里</div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    // 添加到页面
-    document.body.appendChild(this.container);
-  }
-  
-  // 设置Think模式的事件处理
-  setupThinkEvents() {
-    // 关闭按钮
-    const closeBtn = this.container.querySelector('.think-close-btn');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        this.container.style.display = 'none';
-        this.isActive = false;
-        const thinkBtn = document.querySelector('.think-btn');
-        if (thinkBtn) thinkBtn.classList.remove('active');
-        console.log('Think模式: 已关闭');
-      });
-    }
-    
-    // 提交按钮
-    const submitBtn = this.container.querySelector('#think-submit-btn');
-    if (submitBtn) {
-      submitBtn.addEventListener('click', () => {
-        const input = this.container.querySelector('#think-input');
-        if (input && input.value.trim()) {
-          const showProcess = this.container.querySelector('#think-show-process').checked;
-          this.performThinkAnalysis(input.value.trim(), showProcess);
-        } else {
-          app.showMessage('请输入需要分析的问题', 'warning');
+        // 如果没有上传文档，尝试获取聊天框内容
+        const chatContent = this.getChatContent();
+        if (chatContent) {
+          contentToAnalyze = chatContent;
+          console.log('Think模式: 分析聊天框内容');
         }
-      });
-    }
-    
-    // 点击对话框外部关闭
-    this.container.addEventListener('click', (e) => {
-      if (e.target === this.container) {
-        this.container.style.display = 'none';
-        this.isActive = false;
-        const thinkBtn = document.querySelector('.think-btn');
-        if (thinkBtn) thinkBtn.classList.remove('active');
-        console.log('Think模式: 已关闭');
       }
-    });
+      
+      // 如果有内容可分析
+      if (contentToAnalyze) {
+        // 识别技术领域
+        const field = this.recognizeField(contentToAnalyze);
+        console.log('Think模式: 识别的技术领域', field);
+        
+        // 使用识别的技术领域进行分析
+        this.performAutoAnalysis(contentToAnalyze, field);
+      } else {
+        console.log('Think模式: 没有可分析的内容');
+        app.showMessage('没有检测到可分析的内容，请输入内容或上传文档', 'warning');
+      }
+    } catch (error) {
+      console.error('Think模式分析错误:', error);
+      app.showMessage('内容分析失败，请重试', 'error');
+    }
   }
   
-  // 执行Think分析
-  async performThinkAnalysis(query, showProcess = true) {
+  // 获取上传的文档内容
+  getUploadedDocumentContent() {
+    // 从全局上下文或app服务获取上传的文档内容
+    // 这里需要根据实际实现进行调整
+    return app.uploadedDocumentContent || null;
+  }
+  
+  // 获取聊天框内容
+  getChatContent() {
+    // 获取聊天历史或当前输入框内容
+    const chatHistory = app.getChatHistory?.() || [];
+    if (chatHistory.length > 0) {
+      // 合并最近的聊天内容（最多5条）
+      return chatHistory.slice(-5).map(msg => msg.content).join('\n');
+    }
+    
+    // 尝试获取当前输入框内容
+    const inputElement = document.querySelector('#chat-input');
+    if (inputElement && inputElement.value.trim()) {
+      return inputElement.value.trim();
+    }
+    
+    return null;
+  }
+  
+  // 自动执行Think分析
+  async performAutoAnalysis(content, technicalField) {
     // 检查登录状态
     if (!authService.isLoggedIn) {
       app.showMessage('请先登录后使用Think分析功能', 'error');
@@ -183,235 +162,78 @@ class ThinkModeService {
       return;
     }
     
-    const resultArea = this.container.querySelector('#think-result-area');
-    if (!resultArea) return;
+    // 准备针对特定领域的提示词
+    let systemPrompt = "请对以下内容进行深度分析和推理，提供详细见解。";
     
-    // 显示加载动画
-    resultArea.innerHTML = `
-      <div class="think-loading">
-        <div class="think-spinner"></div>
-        <p>正在进行深度分析，这可能需要一些时间...</p>
-      </div>
-    `;
+    // 如果识别出技术领域，添加特定的提示词
+    if (technicalField) {
+      switch(technicalField) {
+        case '计算机软件技术':
+          systemPrompt += "从软件架构、算法复杂度、代码质量和实现方式进行分析。";
+          break;
+        case '机械工程技术':
+          systemPrompt += "从机械原理、结构设计、材料特性和制造工艺进行分析。";
+          break;
+        case '电子电气技术':
+          systemPrompt += "从电路设计、信号处理、电子元件和系统集成角度进行分析。";
+          break;
+        case '通信网络技术':
+          systemPrompt += "从通信协议、网络架构、信号传输和数据安全角度进行分析。";
+          break;
+        case '化学材料技术':
+          systemPrompt += "从分子结构、化学反应、材料性能和合成工艺角度进行分析。";
+          break;
+        case '生物医药技术':
+          systemPrompt += "从生物机制、药理作用、临床应用和医疗创新角度进行分析。";
+          break;
+        case '能源环保技术':
+          systemPrompt += "从能源效率、环境影响、可持续性和技术可行性角度进行分析。";
+          break;
+        case '人工智能技术':
+          systemPrompt += "从算法设计、模型架构、学习方法和应用场景角度进行分析。";
+          break;
+        default:
+          systemPrompt += "提供多角度的综合分析和见解。";
+      }
+    }
+    
+    console.log('Think模式: 使用系统提示词', systemPrompt);
     
     try {
-      // 获取思考模型（从配置中）
-      const model = apiService.config?.thinkingModel || apiService.config?.defaultModel;
+      // 显示分析中的状态
+      app.showMessage('正在进行深度分析...', 'info', false);
       
-      // 准备接收思考过程和结果
-      let thinkingProcess = '';
-      let finalResult = '';
-      let isCompleted = false;
+      // 调用API进行分析
+      const analysisResult = await apiService.getCompletion(
+        content,
+        systemPrompt,
+        apiService.config?.thinkingModel || apiService.config?.defaultModel
+      );
       
-      // 创建结果区域
-      resultArea.innerHTML = `
-        <div class="think-result">
-          <div class="think-result-header">
-            <h4>分析进行中...</h4>
-            <div class="think-progress">
-              <div class="think-progress-animation">
-                <div class="think-dot"></div>
-                <div class="think-dot"></div>
-                <div class="think-dot"></div>
-              </div>
-            </div>
-          </div>
-          ${showProcess ? `
-          <div class="think-process-container">
-            <div class="think-process-header">
-              <span>思考过程</span>
-              <button class="think-process-toggle">隐藏</button>
-            </div>
-            <div class="think-process-content"></div>
-          </div>
-          ` : ''}
-          <div class="think-result-content">
-            <div class="think-result-placeholder">
-              <div class="think-dots-animation">
-                <span class="think-dot"></span>
-                <span class="think-dot"></span>
-                <span class="think-dot"></span>
-              </div>
-            </div>
-          </div>
-          <div class="think-result-actions" style="display: none;">
-            <button class="btn-copy-result"><i class="fas fa-copy"></i> 复制结果</button>
-            <button class="btn-copy-all"><i class="fas fa-copy"></i> 复制全部</button>
-            <button class="btn-add-to-chat"><i class="fas fa-plus"></i> 添加到对话</button>
-          </div>
-        </div>
-      `;
-      
-      // 获取UI元素
-      const resultContent = resultArea.querySelector('.think-result-content');
-      const processContent = resultArea.querySelector('.think-process-content');
-      const resultHeader = resultArea.querySelector('.think-result-header h4');
-      const progressAnimation = resultArea.querySelector('.think-progress-animation');
-      const actionsContainer = resultArea.querySelector('.think-result-actions');
-      
-      // 如果有思考过程切换按钮，设置事件
-      const processToggle = resultArea.querySelector('.think-process-toggle');
-      if (processToggle) {
-        processToggle.addEventListener('click', () => {
-          const container = resultArea.querySelector('.think-process-content');
-          if (container.style.display === 'none') {
-            container.style.display = 'block';
-            processToggle.textContent = '隐藏';
-          } else {
-            container.style.display = 'none';
-            processToggle.textContent = '显示';
-          }
-        });
+      // 分析完成，在聊天界面显示结果
+      if (typeof addMessageToUI === 'function' && analysisResult) {
+        // 添加系统消息说明分析结果
+        addMessageToUI(`思考模式分析结果 (领域: ${technicalField || '综合'})`, 'system');
+        
+        // 添加AI分析结果
+        addMessageToUI(analysisResult, 'ai');
+        
+        // 保存会话
+        if (typeof saveCurrentSession === 'function') {
+          saveCurrentSession();
+        }
+        
+        app.showMessage('深度分析完成', 'success');
+      } else {
+        app.showMessage('分析完成，但无法显示结果', 'warning');
       }
       
-      // 开始流式分析
-      await apiService.streamChatCompletion(
-        query,
-        // 处理每个响应片段
-        (chunk) => {
-          if (chunk.choices && chunk.choices[0]) {
-            const delta = chunk.choices[0].delta;
-            
-            // 处理思考过程
-            if (delta && delta.thinking) {
-              thinkingProcess += delta.thinking;
-              
-              // 更新思考过程显示
-              if (processContent) {
-                processContent.innerHTML = this.formatThinkResult(thinkingProcess);
-                // 自动滚动到底部
-                processContent.scrollTop = processContent.scrollHeight;
-              }
-            }
-            
-            // 处理内容更新
-            if (delta && delta.content) {
-              // 移除占位符
-              if (resultContent.querySelector('.think-result-placeholder')) {
-                resultContent.innerHTML = '';
-              }
-              
-              finalResult += delta.content;
-              resultContent.innerHTML = this.formatThinkResult(finalResult);
-              
-              // 自动滚动到底部
-              resultContent.scrollTop = resultContent.scrollHeight;
-            }
-          }
-        },
-        // 分析完成回调
-        () => {
-          isCompleted = true;
-          
-          // 更新标题
-          if (resultHeader) {
-            resultHeader.textContent = '分析完成';
-          }
-          
-          // 移除动画
-          if (progressAnimation) {
-            // 替换为完成图标
-            progressAnimation.innerHTML = '<i class="fas fa-check-circle" style="color: #4CAF50; font-size: 16px;"></i>';
-          }
-          
-          // 显示操作按钮
-          if (actionsContainer) {
-            actionsContainer.style.display = 'flex';
-            
-            // 复制结果按钮
-            const copyResultBtn = actionsContainer.querySelector('.btn-copy-result');
-            if (copyResultBtn) {
-              copyResultBtn.addEventListener('click', () => {
-                this.copyToClipboard(finalResult);
-                app.showMessage('分析结果已复制到剪贴板', 'success');
-              });
-            }
-            
-            // 复制全部按钮
-            const copyAllBtn = actionsContainer.querySelector('.btn-copy-all');
-            if (copyAllBtn) {
-              copyAllBtn.addEventListener('click', () => {
-                const fullContent = `思考过程:\n\n${thinkingProcess}\n\n最终结果:\n\n${finalResult}`;
-                this.copyToClipboard(fullContent);
-                app.showMessage('完整分析内容已复制到剪贴板', 'success');
-              });
-            }
-            
-            // 添加到对话按钮
-            const addToChatBtn = actionsContainer.querySelector('.btn-add-to-chat');
-            if (addToChatBtn) {
-              addToChatBtn.addEventListener('click', () => {
-                // 添加到主对话中
-                if (typeof addMessageToUI === 'function') {
-                  // 添加用户问题
-                  addMessageToUI(query, 'user');
-                  
-                  // 添加AI回答
-                  const aiResponse = finalResult;
-                  addMessageToUI(aiResponse, 'ai');
-                  
-                  // 保存会话
-                  if (typeof saveCurrentSession === 'function') {
-                    saveCurrentSession();
-                  }
-                  
-                  app.showMessage('已添加到主对话', 'success');
-                  
-                  // 关闭Think对话框
-                  this.container.style.display = 'none';
-                } else {
-                  app.showMessage('无法添加到对话，请刷新页面重试', 'error');
-                }
-              });
-            }
-          }
-          
-          // 保存分析记录
-          this.saveThinkResult(query, thinkingProcess, finalResult);
-        },
-        // 错误处理
-        (error) => {
-          console.error('Think分析出错:', error);
-          
-          // 更新错误显示
-          if (resultHeader) {
-            resultHeader.textContent = '分析出错';
-          }
-          
-          // 更新动画为错误状态
-          if (progressAnimation) {
-            progressAnimation.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #f44336; font-size: 16px;"></i>';
-          }
-          
-          // 显示错误消息
-          resultContent.innerHTML += `
-            <div class="think-error">
-              <i class="fas fa-exclamation-triangle"></i>
-              <p>分析过程中发生错误: ${error.message}</p>
-              <p>已保存部分分析结果</p>
-            </div>
-          `;
-          
-          // 如果有部分结果，还是显示操作按钮
-          if (finalResult && actionsContainer) {
-            actionsContainer.style.display = 'flex';
-          }
-          
-          // 保存部分分析记录
-          this.saveThinkResult(query, thinkingProcess, finalResult, error.message);
-        },
-        model,  // 使用思考模型
-        []      // 思考模式不使用历史上下文，传递空数组
-      );
+      // 保存分析记录
+      this.saveThinkResult(content, systemPrompt, analysisResult);
+      
     } catch (error) {
       console.error('执行Think分析失败:', error);
-      resultArea.innerHTML = `
-        <div class="think-error">
-          <i class="fas fa-exclamation-triangle"></i>
-          <p>分析过程中发生错误，请稍后再试</p>
-          <p class="think-error-details">${error.message}</p>
-        </div>
-      `;
+      app.showMessage('分析过程中发生错误，请稍后再试', 'error');
     }
   }
   
