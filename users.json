@@ -19,6 +19,16 @@
       "avatar": null,
       "created_at": 1711497600000,
       "role": "admin"
+    },
+    {
+      "id": "user_3",
+      "email_hash": "ae2b1fca515949e5d54fb22b8ed95575",
+      "password_hash": "f41da0c65a8fa2153e6b6144f3258bae",
+      "name_encrypted": "U2FsdGVkX1/4gIW7a9oxDpJAvIJzGEkjX9ydhXuEdG4=",
+      "initials": "PR",
+      "avatar": null,
+      "created_at": 1712007600000,
+      "role": "pro"
     }
   ]
 }
