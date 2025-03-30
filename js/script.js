@@ -53,6 +53,23 @@ const PATENT_RESPONSE_PROMPT = `你是一位专业的专利代理人，请根据
 
 请开始分析审查意见通知书并提供答复意见。`;
 
+// 专利撰写提示词
+const PATENT_WRITING_PROMPT = `请根据以下技术内容，撰写专利申请文件。请按照以下步骤进行：
+
+1. 详细描述技术方案
+2. 解释有益效果
+3. 附上附图说明
+4. 提供具体实施方式
+5. 撰写权利要求书
+
+请确保专利申请文件：
+- 符合专利法及实施细则的规定
+- 逻辑清晰，论述充分
+- 引用相关法条和审查指南
+- 提供具体的修改建议
+
+请开始撰写专利申请文件。`;
+
 // 初始化函数
 function init() {
     // 检查用户登录状态
@@ -3257,19 +3274,38 @@ async function processFile(file) {
             throw new Error('不支持的文件类型');
         }
         
-        // 检查是否包含专利相关关键词
-        const patentKeywords = ['审查意见通知书', '审查员', '专利', '权利要求'];
-        const hasPatentKeywords = patentKeywords.some(keyword => content.includes(keyword));
+        // 存储文档内容以供Think模式使用
+        app.uploadedDocumentContent = content;
         
-        if (hasPatentKeywords) {
+        // 检查是否包含专利相关关键词
+        const contentType = detectContentType(content);
+        
+        if (contentType === 'patent_review') {
             // 显示系统提示消息
-            showSystemMessage('检测到专利相关文件，已切换到专利答审模式');
+            showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
             
-            // 加载专利答审模式的提示词
-            const prompt = PATENT_RESPONSE_PROMPT;
+            // 识别技术领域
+            const field = thinkModeService.recognizeField(content);
+            console.log('识别的技术领域:', field);
+            
+            // 加载专利答审模式的提示词并替换字段
+            let prompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
             
             // 发送提示词和文件内容给AI
             await sendMessage(prompt + '\n\n审查意见通知书内容：\n' + content);
+        } else if (contentType === 'patent_writing') {
+            // 显示系统提示消息
+            showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
+            
+            // 识别技术领域
+            const field = thinkModeService.recognizeField(content);
+            console.log('识别的技术领域:', field);
+            
+            // 加载专利撰写模式的提示词
+            const prompt = PATENT_WRITING_PROMPT;
+            
+            // 发送提示词和文件内容给AI
+            await sendMessage(prompt + '\n\n技术内容：\n' + content);
         } else {
             // 显示普通文件上传提示
             showSystemMessage('已上传文件，正在分析内容...');
@@ -3283,50 +3319,153 @@ async function processFile(file) {
     }
 }
 
-// 处理PDF文件
-async function processPDF(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const arrayBuffer = e.target.result;
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                let fullText = '';
-                
-                // 提取所有页面的文本
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
-                }
-                
-                resolve(fullText);
-            } catch (error) {
-                reject(new Error('PDF处理失败：' + error.message));
-            }
-        };
-        reader.onerror = () => reject(new Error('文件读取失败'));
-        reader.readAsArrayBuffer(file);
-    });
+// 检测内容类型函数
+function detectContentType(content) {
+    if (!content) return 'general';
+    
+    // 转换为小写进行匹配
+    const lowerContent = content.toLowerCase();
+    
+    // 专利答审关键词
+    const patentReviewKeywords = [
+        '审查意见通知书', '驳回决定', '审查员', '不具备新颖性', '不具备创造性', 
+        '不具备实用性', '权利要求', '说明书公开不充分', '权利要求得不到说明书支持',
+        '专利法第二十二条', '专利法第二十六条', '对比文件', '最接近的现有技术',
+        '区别特征', '技术启示', '技术效果', '公知常识', '技术方案', '审查实践', 
+        '审查指南', '答复', '意见陈述', '权利要求书', '修改', '进一步限定'
+    ];
+    
+    // 专利撰写关键词
+    const patentWritingKeywords = [
+        '发明内容', '技术方案', '有益效果', '附图说明', '具体实施方式', '权利要求', 
+        '独立权利要求', '从属权利要求', '技术领域', '背景技术', '发明目的', 
+        '技术问题', '技术特征', '实施例', '专利申请', '专利申请文件', '专利文件撰写', 
+        '说明书撰写', '权利要求撰写', '摘要撰写', '优选地', '根据权利要求', 
+        '如图所示', '详细描述', '请求保护', '写法', '模板', '申请文件'
+    ];
+    
+    // 计算匹配得分
+    let reviewScore = 0;
+    let writingScore = 0;
+    
+    // 检查专利答审关键词
+    for (const keyword of patentReviewKeywords) {
+        if (lowerContent.includes(keyword)) {
+            reviewScore++;
+        }
+    }
+    
+    // 检查专利撰写关键词
+    for (const keyword of patentWritingKeywords) {
+        if (lowerContent.includes(keyword)) {
+            writingScore++;
+        }
+    }
+    
+    console.log('内容类型检测：答审得分', reviewScore, '撰写得分', writingScore);
+    
+    // 根据得分确定类型
+    if (reviewScore > writingScore && reviewScore >= 3) {
+        return 'patent_review';
+    } else if (writingScore > reviewScore && writingScore >= 3) {
+        return 'patent_writing';
+    } else if (reviewScore >= 2 || writingScore >= 2) {
+        // 如果包含少量关键词，检查是否包含专利等核心词
+        if (lowerContent.includes('专利') || lowerContent.includes('权利要求')) {
+            return reviewScore > writingScore ? 'patent_review' : 'patent_writing';
+        }
+    }
+    
+    return 'general';
 }
 
-// 处理Word文档
-async function processDocument(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const arrayBuffer = e.target.result;
-                const result = await mammoth.extractRawText({ arrayBuffer });
-                resolve(result.value);
-            } catch (error) {
-                reject(new Error('Word文档处理失败：' + error.message));
-            }
-        };
-        reader.onerror = () => reject(new Error('文件读取失败'));
-        reader.readAsArrayBuffer(file);
-    });
+// 处理聊天输入
+async function handleSubmit(event) {
+    event.preventDefault();
+    const userInput = chatInput.value.trim();
+    
+    if (!userInput) return;
+    
+    // 保存当前输入用于重试
+    lastUserMessage = userInput;
+    
+    // 重置输入框
+    chatInput.value = '';
+    resetTextareaHeight();
+    
+    // 添加用户消息到UI
+    addMessageToUI(userInput, 'user');
+    
+    // 禁用输入
+    disableInput();
+    
+    // 检测内容类型并选择合适的提示词
+    const contentType = detectContentType(userInput);
+    
+    // 保存为app.uploadedDocumentContent以供Think模式使用
+    app.uploadedDocumentContent = userInput;
+    
+    // 根据检测到的内容类型，应用不同的处理逻辑
+    if (contentType === 'patent_review' && !inPatentReviewMode) {
+        // 切换到专利答审模式
+        inPatentReviewMode = true;
+        inPatentWritingMode = false;
+        
+        // 显示模式切换提示
+        showSystemMessage('检测到专利答审相关内容，已切换到专利答审模式');
+        
+        // 识别技术领域
+        const field = thinkModeService.recognizeField(userInput);
+        
+        // 应用专利答审提示词
+        let systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", field || "一般技术");
+        
+        try {
+            await streamAIResponse(userInput, 'patent_review', currentModel, systemPrompt);
+        } catch (error) {
+            console.error('AI响应错误:', error);
+            showSystemMessage('生成响应时出错: ' + error.message);
+        }
+    } else if (contentType === 'patent_writing' && !inPatentWritingMode) {
+        // 切换到专利撰写模式
+        inPatentWritingMode = true;
+        inPatentReviewMode = false;
+        
+        // 显示模式切换提示
+        showSystemMessage('检测到专利撰写相关内容，已切换到专利撰写模式');
+        
+        // 应用专利撰写提示词
+        let systemPrompt = PATENT_WRITING_PROMPT;
+        
+        try {
+            await streamAIResponse(userInput, 'patent_writing', currentModel, systemPrompt);
+        } catch (error) {
+            console.error('AI响应错误:', error);
+            showSystemMessage('生成响应时出错: ' + error.message);
+        }
+    } else {
+        // 普通对话模式或继续现有模式
+        let mode = 'chat';
+        
+        if (inPatentReviewMode) {
+            mode = 'patent_review';
+        } else if (inPatentWritingMode) {
+            mode = 'patent_writing';
+        }
+        
+        try {
+            await streamAIResponse(userInput, mode, currentModel);
+        } catch (error) {
+            console.error('AI响应错误:', error);
+            showSystemMessage('生成响应时出错: ' + error.message);
+        }
+    }
+    
+    // 启用输入
+    enableInput();
+    
+    // 保存会话
+    saveCurrentSession();
 }
 
 // 当页面加载完成时初始化
