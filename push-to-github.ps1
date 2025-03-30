@@ -1,5 +1,9 @@
 # 自动推送代码到GitHub的PowerShell脚本
 
+# 设置代理
+$env:HTTP_PROXY="http://127.0.0.1:7890"
+$env:HTTPS_PROXY="http://127.0.0.1:7890"
+
 # 获取当前日期时间作为提交信息
 $dateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $commitMessage = "自动提交: $dateTime"
@@ -14,7 +18,8 @@ if ($status) {
     git commit -m $commitMessage
     
     # 推送到GitHub
-    git push origin master
+    Write-Host "正在通过代理推送到GitHub..." -ForegroundColor Yellow
+    git push origin main
     
     Write-Host "成功推送更改到GitHub！" -ForegroundColor Green
 } else {
