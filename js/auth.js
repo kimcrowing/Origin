@@ -178,6 +178,17 @@ class AuthService {
     const user = this.getCurrentUser();
     return user && user.role === 'admin';
   }
+
+  // 检查用户是否为专业版用户
+  isPro() {
+    const user = this.getCurrentUser();
+    return user && (user.role === 'pro' || user.role === 'admin');
+  }
+
+  // 检查用户是否有权限使用高级功能（包括pro和admin）
+  hasAdvancedAccess() {
+    return this.isAdmin() || this.isPro();
+  }
 }
 
 // 创建并导出认证服务实例
