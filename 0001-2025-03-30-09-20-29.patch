@@ -1,0 +1,58 @@
+From a67817183dd4a4ae6743be3a99d18c2da16c3d55 Mon Sep 17 00:00:00 2001
+From: unknown <kimcrowing@hotmail.com>
+Date: Sun, 30 Mar 2025 09:20:29 +0800
+Subject: [PATCH] =?utf-8?q?=E8=87=AA=E5=8A=A8=E6=8F=90=E4=BA=A4:=202025-03?=
+ =?utf-8?q?-30=2009:20:29?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+---
+ how ed4e4a0        | 10 ++++++++++
+ push-to-github.ps1 |  7 ++++++-
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+ create mode 100644 how ed4e4a0
+
+diff --git a/how ed4e4a0 b/how ed4e4a0
+new file mode 100644
+index 0000000..65ad237
+--- /dev/null
++++ b/how ed4e4a0	
+@@ -0,0 +1,10 @@
++[33mb52d3d8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m 将历史会话按钮图标更改为更贴切的图标：主按钮使用fa-history，列表项使用fa-clock
++[33m78582cc[m 将用户按钮图标更新为网站logo形状，并为不同用户设置不同填充颜色（管理员：蓝色，普通用户：紫色）
++[33m4a37798[m 修复管理员用户图标样式：将背景色改为图标填充色
++[33m067735f[m 将用户头像按钮替换为SVG图标，适配暗黑和浅色主题
++[33m44ecc01[m 移除发送消息后弹出的对话模式提醒
++[33m5fd3b34[m 移除每次刷新页面显示的欢迎对话
++[33med4e4a0[m 将聊天区域背景设置为透明
++[33ma08d823[m 将AI消息背景设置为透明
++[33mca361d9[m 将发送按钮图标从箭头改为纸飞机
++[33m2fbdc5e[m 自动提交: 2025-03-28 14:02:29
+diff --git a/push-to-github.ps1 b/push-to-github.ps1
+index a55ac12..7c8ebdb 100644
+--- a/push-to-github.ps1
++++ b/push-to-github.ps1
+@@ -1,5 +1,9 @@
+ # 自动推送代码到GitHub的PowerShell脚本
+ 
++# 设置代理
++$env:HTTP_PROXY="http://127.0.0.1:7890"
++$env:HTTPS_PROXY="http://127.0.0.1:7890"
++
+ # 获取当前日期时间作为提交信息
+ $dateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+ $commitMessage = "自动提交: $dateTime"
+@@ -14,7 +18,8 @@ if ($status) {
+     git commit -m $commitMessage
+     
+     # 推送到GitHub
+-    git push origin master
++    Write-Host "正在通过代理推送到GitHub..." -ForegroundColor Yellow
++    git push origin main
+     
+     Write-Host "成功推送更改到GitHub！" -ForegroundColor Green
+ } else {
+-- 
+2.44.0.windows.1
+
