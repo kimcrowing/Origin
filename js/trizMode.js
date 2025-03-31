@@ -179,7 +179,9 @@ class TrizModeService {
         window.deepSearchToggle.checked = true;
       }
       
-      console.log('TRIZ模式: 已开启，等待用户提交专利内容');
+      // 在控制台显示状态信息
+      console.log('%c[TRIZ模式] %c已开启', 'color: #4a7bff; font-weight: bold', 'color: #4a7bff');
+      console.log('TRIZ模式: 等待用户提交专利内容');
     } else {
       // 关闭TRIZ模式
       this.isActive = false;
@@ -197,7 +199,9 @@ class TrizModeService {
         window.deepSearchToggle.checked = false;
       }
       
-      console.log('TRIZ模式: 已关闭');
+      // 在控制台显示状态信息
+      console.log('%c[TRIZ模式] %c已关闭', 'color: #888; font-weight: bold', 'color: #888');
+      
       // 清除TRIZ提示词
       this.clearTrizPrompt();
     }
@@ -353,7 +357,8 @@ class TrizModeService {
         if (trizIcon) trizIcon.style.color = '#4a7bff';
         if (trizText) trizText.style.color = '#4a7bff';
         
-        console.log('初始化TRIZ按钮状态为激活');
+        // 在控制台显示状态信息
+        console.log('%c[TRIZ模式] %c初始化状态：已激活', 'color: #4a7bff; font-weight: bold', 'color: #4a7bff');
       } else {
         this.isActive = false;
         trizBtn.classList.remove('active');
@@ -365,7 +370,8 @@ class TrizModeService {
         if (trizIcon) trizIcon.style.color = '';
         if (trizText) trizText.style.color = '';
         
-        console.log('初始化TRIZ按钮状态为未激活');
+        // 在控制台显示状态信息
+        console.log('%c[TRIZ模式] %c初始化状态：未激活', 'color: #888; font-weight: bold', 'color: #888');
       }
     }, 500); // 稍微延迟，确保DOM和deepSearchToggle已初始化
   }
