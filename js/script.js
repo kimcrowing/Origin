@@ -53,6 +53,30 @@ const PATENT_RESPONSE_PROMPT = `你是一位专业的专利代理人，请根据
 
 请开始分析审查意见通知书并提供答复意见。`;
 
+// 专利三步法创造性分析提示词
+const PATENT_CREATIVITY_PROMPT = `你是一位专业的专利代理人，请使用"三步法"对审查意见中提到的创造性问题进行详细分析和答复。请按照以下步骤进行：
+
+1. 首先确定最接近的现有技术
+   - 分析审查意见中引用的对比文件
+   - 选择技术方案最接近的现有技术文件
+   - 说明选择理由
+
+2. 确定区别特征
+   - 客观分析本申请的技术特征
+   - 详细列出区别于最接近现有技术的技术特征
+   - 清晰陈述这些区别特征
+
+3. 分析区别特征解决的技术问题及技术效果
+   - 分析区别特征实际解决的技术问题
+   - 论证这些问题是否为本领域技术人员从最接近现有技术中能够预见的
+   - 说明区别特征带来的技术效果和技术贡献
+
+请为每个创造性争议提供充分的论证，论证申请方案相对于现有技术具有实质性特点和显著进步。
+
+技术领域：{{field}}
+
+请开始分析并提供专业的创造性答复意见。`;
+
 // 专利撰写提示词
 const PATENT_WRITING_PROMPT = `请根据以下技术内容，撰写专利申请文件。请按照以下步骤进行：
 
@@ -1086,6 +1110,15 @@ function handleSubmit(event) {
             
             // 识别技术领域
             technicalField = thinkModeService.recognizeField(userMessage);
+        } else if (contentType === 'patent_creativity') {
+            mode = 'patent_creativity';
+            console.log('检测到专利创造性问题，切换到专利三步法分析模式');
+            showSystemMessage('检测到专利创造性问题，已切换到三步法分析模式');
+            inPatentReviewMode = true;
+            inPatentWritingMode = false;
+            
+            // 识别技术领域
+            technicalField = thinkModeService.recognizeField(userMessage);
         } else if (contentType === 'patent_writing') {
             mode = 'patent_writing';
             console.log('检测到专利撰写内容，切换到专利撰写模式');
@@ -1132,6 +1165,9 @@ function handleSubmit(event) {
     if (mode === 'patent_review' && technicalField) {
         // 专利答审提示词
         systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", technicalField || "一般技术");
+    } else if (mode === 'patent_creativity' && technicalField) {
+        // 专利创造性三步法分析提示词
+        systemPrompt = PATENT_CREATIVITY_PROMPT.replace("{{field}}", technicalField || "一般技术");
     } else if (mode === 'patent_writing') {
         // 专利撰写提示词
         systemPrompt = PATENT_WRITING_PROMPT;
@@ -3378,62 +3414,71 @@ async function processFile(file) {
 
 // 检测内容类型函数
 function detectContentType(content) {
-    if (!content) return 'general';
+    if (!content) return null;
     
-    // 转换为小写进行匹配
+    // 转换为小写以便不区分大小写匹配
     const lowerContent = content.toLowerCase();
     
-    // 专利答审关键词
+    // 定义关键词组
     const patentReviewKeywords = [
-        '审查意见通知书', '驳回决定', '审查员', '不具备新颖性', '不具备创造性', 
-        '不具备实用性', '权利要求', '说明书公开不充分', '权利要求得不到说明书支持',
-        '专利法第二十二条', '专利法第二十六条', '对比文件', '最接近的现有技术',
-        '区别特征', '技术启示', '技术效果', '公知常识', '技术方案', '审查实践', 
-        '审查指南', '答复', '意见陈述', '权利要求书', '修改', '进一步限定'
+        '审查意见', '通知书', '驳回', '答复', '答辩', '审查员',
+        '最接近现有技术', '权利要求', '修改', '说明书'
     ];
     
-    // 专利撰写关键词
+    const patentCreativityKeywords = [
+        '创造性', '三步法', '区别特征', '对比文件', '实质性特点',
+        '显著进步', '技术效果', '本领域技术人员', '现有技术',
+        '不具备创造性', '一项发明', '一种使用方式', '一种制造方法',
+        '不具备创造性'
+    ];
+    
     const patentWritingKeywords = [
-        '发明内容', '技术方案', '有益效果', '附图说明', '具体实施方式', '权利要求', 
-        '独立权利要求', '从属权利要求', '技术领域', '背景技术', '发明目的', 
-        '技术问题', '技术特征', '实施例', '专利申请', '专利申请文件', '专利文件撰写', 
-        '说明书撰写', '权利要求撰写', '摘要撰写', '优选地', '根据权利要求', 
-        '如图所示', '详细描述', '请求保护', '写法', '模板', '申请文件'
+        '专利申请', '撰写', '权利要求书', '实施例', '技术方案',
+        '背景技术', '发明内容', '附图说明', '有益效果', '具体实施方式'
     ];
     
-    // 计算匹配得分
-    let reviewScore = 0;
-    let writingScore = 0;
+    // 计算各类型关键词匹配数量
+    let reviewCount = 0;
+    let creativityCount = 0;
+    let writingCount = 0;
     
-    // 检查专利答审关键词
-    for (const keyword of patentReviewKeywords) {
+    patentReviewKeywords.forEach(keyword => {
         if (lowerContent.includes(keyword)) {
-            reviewScore++;
+            reviewCount++;
         }
+    });
+    
+    patentCreativityKeywords.forEach(keyword => {
+        if (lowerContent.includes(keyword)) {
+            creativityCount++;
+        }
+    });
+    
+    patentWritingKeywords.forEach(keyword => {
+        if (lowerContent.includes(keyword)) {
+            writingCount++;
+        }
+    });
+    
+    console.log('内容类型检测计数:', {reviewCount, creativityCount, writingCount});
+    
+    // 创造性问题通常出现在审查意见中，需要同时匹配审查意见关键词和创造性关键词
+    if (reviewCount >= 2 && creativityCount >= 2) {
+        console.log('检测到专利创造性问题，将使用三步法分析');
+        return 'patent_creativity';
     }
     
-    // 检查专利撰写关键词
-    for (const keyword of patentWritingKeywords) {
-        if (lowerContent.includes(keyword)) {
-            writingScore++;
-        }
-    }
-    
-    console.log('内容类型检测：答审得分', reviewScore, '撰写得分', writingScore);
-    
-    // 根据得分确定类型
-    if (reviewScore > writingScore && reviewScore >= 3) {
+    // 根据匹配数量确定内容类型
+    if (reviewCount >= 3) {
         return 'patent_review';
-    } else if (writingScore > reviewScore && writingScore >= 3) {
-        return 'patent_writing';
-    } else if (reviewScore >= 2 || writingScore >= 2) {
-        // 如果包含少量关键词，检查是否包含专利等核心词
-        if (lowerContent.includes('专利') || lowerContent.includes('权利要求')) {
-            return reviewScore > writingScore ? 'patent_review' : 'patent_writing';
-        }
     }
     
-    return 'general';
+    if (writingCount >= 3) {
+        return 'patent_writing';
+    }
+    
+    // 默认返回null，表示无法确定类型
+    return null;
 }
 
 // 当页面加载完成时初始化
