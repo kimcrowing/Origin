@@ -579,41 +579,48 @@ button:focus {
 .search-group {
     display: flex;
     align-items: center;
-    background-color: transparent;
     border-radius: 4px;
     margin-right: 10px;
-    padding: 2px;
+    padding: 0;
     height: 28px;
     transition: background-color 0.2s ease;
 }
 
 .search-group:hover {
-    background-color: rgba(128, 128, 128, 0.05);
+    background-color: transparent;
 }
 
 .search-btn {
     display: flex;
     align-items: center;
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 4px;
     color: var(--text-color);
     font-size: 14px;
     height: 100%;
     background-color: transparent;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .search-btn.active {
-    background-color: rgba(128, 128, 128, 0.15);
+    background-color: transparent;
 }
 
 .search-btn:hover:not(.active) {
-    background-color: rgba(128, 128, 128, 0.1);
+    background-color: rgba(128, 128, 128, 0.2);
 }
 
 .search-btn i {
     margin-right: 6px;
     font-size: 12px;
+    color: var(--secondary-text);
+    transition: color 0.2s ease;
+}
+
+/* TRIZ按钮活跃状态 */
+.search-btn.active i,
+.search-btn.active span {
+    color: #4a7bff;
 }
 
 .dropdown-btn {
