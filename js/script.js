@@ -3629,4 +3629,4 @@ function enableInput() {
         submitBtn.disabled = false;
         submitBtn.classList.remove('disabled');
     }
-}
+} 
