@@ -28,19 +28,46 @@ class ThinkModeService {
     thinkBtn.addEventListener('click', (e) => {
       e.preventDefault();
       
-      // 使用更宽松的登录检查方式
-      const isUserLoggedIn = authService?.isLoggedIn || window.currentUser;
+      // 直接检查authService的isLoggedIn状态，并作为第一选择
+      // 同时增加对currentUser的兜底检查
+      const isUserLoggedIn = authService.isLoggedIn || window.currentUser;
+      
+      // 记录当前登录状态，方便调试
+      console.log('Think按钮点击 - 登录状态检查:', { 
+        authServiceIsLoggedIn: authService.isLoggedIn,
+        windowCurrentUser: !!window.currentUser,
+        combinedResult: isUserLoggedIn,
+        currentUserRole: window.currentUser?.role || '未登录'
+      });
       
       // 首先检查是否已登录
       if (!isUserLoggedIn) {
         app.showMessage('请先登录后使用功能', 'warning');
+        // 添加登录提示到控制台
+        console.error('Think模式需要登录后使用');
         return;
       }
       
-      // 检查是否有高级访问权限（管理员或pro用户）
-      if (authService?.hasAdvancedAccess() || (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'pro'))) {
+      // 检查是否为管理员或pro用户
+      const isAdmin = authService.isAdmin();
+      const isPro = authService.isPro();
+      const hasAdvancedAccess = authService.hasAdvancedAccess();
+      const roleBasedAccess = window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'pro');
+      
+      // 记录权限检查信息
+      console.log('Think按钮权限检查:', { 
+        isAdmin, 
+        isPro, 
+        hasAdvancedAccess, 
+        roleBasedAccess,
+        userRole: window.currentUser?.role || '未知'
+      });
+      
+      // 如果有任一高级权限，直接使用Think模式
+      if (hasAdvancedAccess || roleBasedAccess) {
         // 有权限直接切换Think模式
         this.toggleThinkMode();
+        console.log('高级用户直接切换Think模式');
         return;
       }
       
@@ -88,15 +115,8 @@ class ThinkModeService {
   
   // 切换Think模式状态
   toggleThinkMode() {
-    // 使用更宽松的登录检查方式
-    const isUserLoggedIn = authService?.isLoggedIn || window.currentUser;
-    
-    // 确保用户已登录
-    if (!isUserLoggedIn) {
-      console.log('Think模式: 未登录状态，无法开启');
-      return;
-    }
-    
+    // 增强登录检查逻辑，同时避免重复检查
+    // 如果能执行到这一步，说明之前的登录检查已经通过，无需再次检查
     const thinkBtn = document.querySelector('.think-btn');
     
     // 切换状态
@@ -127,6 +147,13 @@ class ThinkModeService {
   // 分析当前内容（上传文档或聊天框内容）
   analyzeCurrentContent() {
     try {
+      // 确保已登录 - 复用与initThinkButton相同的登录检查
+      const isUserLoggedIn = authService.isLoggedIn || window.currentUser;
+      if (!isUserLoggedIn) {
+        console.error('Think模式: 未登录状态，无法分析内容');
+        return;
+      }
+      
       let contentToAnalyze = '';
       
       // 尝试获取上传的文档内容
@@ -191,18 +218,28 @@ class ThinkModeService {
   
   // 自动执行Think分析
   async performAutoAnalysis(content, technicalField) {
-    // 使用更宽松的登录检查方式
-    const isUserLoggedIn = authService?.isLoggedIn || window.currentUser;
+    // 直接使用auth服务检查，并添加详细的登录状态日志
+    const isUserLoggedIn = authService.isLoggedIn || window.currentUser;
+    
+    console.log('执行分析 - 登录状态检查:', { 
+      authServiceIsLoggedIn: authService.isLoggedIn,
+      windowCurrentUser: !!window.currentUser,
+      combinedResult: isUserLoggedIn,
+      currentUserRole: window.currentUser?.role || '未登录',
+      isAdmin: authService.isAdmin(),
+      isPro: authService.isPro(),
+      hasAdvancedAccess: authService.hasAdvancedAccess()
+    });
     
     // 检查登录状态
     if (!isUserLoggedIn) {
-      console.error('Think模式: 用户未登录');
+      console.error('Think模式: 用户未登录，无法执行分析');
       return;
     }
     
     // 检查在线状态
     if (!authService.isOnline) {
-      console.error('Think模式: 系统离线');
+      console.error('Think模式: 系统离线，无法执行分析');
       return;
     }
     
