@@ -346,7 +346,7 @@ class ApiService {
         // 否则根据模式选择适当的模型
         let model = this.config?.defaultModel;
         
-        if (mode === 'deep') {
+        if (mode === 'deep' || mode === 'triz') {
             model = this.config?.deepSearchModel || model;
         } else if (mode === 'think') {
             model = this.config?.thinkingModel || model;

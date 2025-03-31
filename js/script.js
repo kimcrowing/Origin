@@ -53,30 +53,6 @@ const PATENT_RESPONSE_PROMPT = `你是一位专业的专利代理人，请根据
 
 请开始分析审查意见通知书并提供答复意见。`;
 
-// 专利三步法创造性分析提示词
-const PATENT_CREATIVITY_PROMPT = `你是一位专业的专利代理人，请使用"三步法"对审查意见中提到的创造性问题进行详细分析和答复。请按照以下步骤进行：
-
-1. 首先确定最接近的现有技术
-   - 分析审查意见中引用的对比文件
-   - 选择技术方案最接近的现有技术文件
-   - 说明选择理由
-
-2. 确定区别特征
-   - 客观分析本申请的技术特征
-   - 详细列出区别于最接近现有技术的技术特征
-   - 清晰陈述这些区别特征
-
-3. 分析区别特征解决的技术问题及技术效果
-   - 分析区别特征实际解决的技术问题
-   - 论证这些问题是否为本领域技术人员从最接近现有技术中能够预见的
-   - 说明区别特征带来的技术效果和技术贡献
-
-请为每个创造性争议提供充分的论证，论证申请方案相对于现有技术具有实质性特点和显著进步。
-
-技术领域：{{field}}
-
-请开始分析并提供专业的创造性答复意见。`;
-
 // 专利撰写提示词
 const PATENT_WRITING_PROMPT = `请根据以下技术内容，撰写专利申请文件。请按照以下步骤进行：
 
@@ -1002,7 +978,7 @@ function handleMenuAction(action) {
 
 ## 基本功能
 - **对话**：直接输入问题或请求
-- **DeepSearch**：开启深度搜索，获取更准确的信息
+- **TRIZ模式**：利用TRIZ原理对专利进行对比分析，识别技术区别
 - **Think模式**：获取更深入的分析和推理
 
 ## 特殊命令
@@ -1080,16 +1056,29 @@ function handleSubmit(event) {
     showThinkingIndicator();
     
     // 检查模式选择
-    const isDeepSearchMode = deepSearchToggle.checked;
+    const isTrizMode = window.trizService?.isActive || false;
     const isStreamingMode = streamToggle.checked;
     const isThinkingMode = thinkToggle.checked;
     
-    // 可以从event参数中获取是否是由Think按钮触发的
-    let mode = isDeepSearchMode ? 'deep' : (isThinkingMode ? 'think' : 'chat');
-    
-    // 如果参数是字符串且是'think'，则覆盖模式为think
-    if (typeof event === 'string' && event === 'think') {
+    // 检查事件中是否明确指定了模式
+    let mode = 'chat';
+    if (event && event.trizMode) {
+        mode = 'triz';
+    } else if (isTrizMode) {
+        mode = 'triz';
+    } else if (isThinkingMode) {
         mode = 'think';
+    }
+    
+    // 可以在这里定义特定的systemPrompt
+    let systemPrompt = null;
+    
+    // 根据模式设置不同的systemPrompt
+    if (mode === 'triz' && window.trizService) {
+        systemPrompt = window.trizService.getTrizPrompt();
+        console.log('使用TRIZ模式进行专利分析');
+    } else if (mode === 'think') {
+        console.log('使用思考模式');
     }
     
     // 如果思考模式开启，检查是否需要识别内容类型
@@ -1159,9 +1148,6 @@ function handleSubmit(event) {
     }, 5000); // 5秒后显示等待提示
     
     // 准备系统提示词
-    let systemPrompt = null;
-    
-    // 根据模式和内容类型设置系统提示词
     if (mode === 'patent_review' && technicalField) {
         // 专利答审提示词
         systemPrompt = PATENT_RESPONSE_PROMPT.replace("{{field}}", technicalField || "一般技术");
@@ -1238,6 +1224,10 @@ function updateModeIndicator(mode) {
         case 'deep':
             indicator.innerHTML = '<i class="fas fa-search-plus"></i> 深度搜索模式';
             indicator.classList.add('deep-mode');
+            break;
+        case 'triz':
+            indicator.innerHTML = '<i class="fas fa-ghost"></i> TRIZ分析模式';
+            indicator.classList.add('triz-mode');
             break;
         case 'think':
             indicator.innerHTML = '<i class="fas fa-brain"></i> 思考模式';
@@ -3282,7 +3272,7 @@ function handleSpecialCommand(command) {
 
 ## 基本功能
 - **对话**：直接输入问题或请求
-- **DeepSearch**：开启深度搜索，获取更准确的信息
+- **TRIZ模式**：利用TRIZ原理对专利进行对比分析，识别技术区别
 - **Think模式**：获取更深入的分析和推理
 
 ## 特殊命令
