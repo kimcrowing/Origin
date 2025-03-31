@@ -8,6 +8,7 @@ class ThinkModeService {
     // 在页面加载时初始化Think按钮事件
     document.addEventListener('DOMContentLoaded', () => {
       this.initThinkButton();
+      this.initSubmitButtonListener();
     });
   }
   
@@ -54,6 +55,37 @@ class ThinkModeService {
     });
   }
   
+  // 添加提交按钮事件监听
+  initSubmitButtonListener() {
+    const submitBtn = document.querySelector('.submit-btn');
+    if (!submitBtn) return;
+    
+    submitBtn.addEventListener('click', (e) => {
+      // 只有在思考模式激活时才执行分析
+      if (this.isActive) {
+        console.log('Think模式: 检测到内容提交，准备分析');
+        // 延迟执行分析，确保内容已经提交到聊天区域
+        setTimeout(() => {
+          this.analyzeCurrentContent();
+        }, 500);
+      }
+    });
+    
+    // 同时监听输入框的回车键
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && this.isActive) {
+          console.log('Think模式: 检测到Enter键提交，准备分析');
+          // 延迟执行分析，确保内容已经提交到聊天区域
+          setTimeout(() => {
+            this.analyzeCurrentContent();
+          }, 500);
+        }
+      });
+    }
+  }
+  
   // 切换Think模式状态
   toggleThinkMode() {
     // 使用更宽松的登录检查方式
@@ -76,10 +108,10 @@ class ThinkModeService {
       // 移除用户通知，仅记录日志
       // app.showMessage('思考模式已开启，系统将自动分析内容', 'info');
       
-      // 分析当前内容
-      this.analyzeCurrentContent();
+      // 不再立即分析内容，而是等待用户提交
+      // this.analyzeCurrentContent();
       
-      console.log('Think模式: 已开启');
+      console.log('Think模式: 已开启，等待用户提交内容');
     } else {
       // 关闭思考模式
       this.isActive = false;
@@ -229,21 +261,21 @@ class ThinkModeService {
         
         // 添加AI分析结果
         addMessageToUI(analysisResult, 'ai');
-        
-        // 保存会话
-        if (typeof saveCurrentSession === 'function') {
-          saveCurrentSession();
-        }
-        
+                  
+                  // 保存会话
+                  if (typeof saveCurrentSession === 'function') {
+                    saveCurrentSession();
+                  }
+                  
         // 移除成功提示，用户可以从界面看到结果
         console.log('Think模式: 分析完成');
-      } else {
+                } else {
         // 保留这个错误提示，因为这是用户无法从界面察觉的错误
         console.error('Think模式: 分析完成但无法显示结果');
         app.showMessage('分析完成，但无法显示结果', 'warning');
-      }
-      
-      // 保存分析记录
+          }
+          
+          // 保存分析记录
       this.saveThinkResult(content, systemPrompt, analysisResult);
       
     } catch (error) {
