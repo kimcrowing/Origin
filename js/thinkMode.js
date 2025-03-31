@@ -241,7 +241,20 @@ class ThinkModeService {
       }
     }
     
-    console.log('Think模式: 使用系统提示词', systemPrompt);
+    // 详细打印系统提示词
+    console.log('%c思考模式分析详情:', 'color: blue; font-weight: bold');
+    console.log('%c技术领域:', 'color: green', technicalField || '未识别特定领域');
+    console.log('%c系统提示词:', 'color: purple', systemPrompt);
+    console.log('%c用户内容长度:', 'color: orange', content.length, '字符');
+    console.log('%c内容前30字符:', 'color: gray', content.substring(0, 30) + '...');
+    
+    // 显示将发送到API的完整消息结构
+    const completePrompt = {
+      system: systemPrompt,
+      content: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+      model: apiService.config?.thinkingModel || apiService.config?.defaultModel
+    };
+    console.log('%c完整API请求信息:', 'color: red', completePrompt);
     
     try {
       // 移除状态提示，只记录到控制台
@@ -254,6 +267,12 @@ class ThinkModeService {
         apiService.config?.thinkingModel || apiService.config?.defaultModel
       );
       
+      // 记录分析结果的前100个字符
+      if (analysisResult) {
+        console.log('%c分析结果前100字符:', 'color: blue', 
+          analysisResult.substring(0, 100) + (analysisResult.length > 100 ? '...' : ''));
+      }
+      
       // 分析完成，在聊天界面显示结果
       if (typeof addMessageToUI === 'function' && analysisResult) {
         // 添加系统消息说明分析结果
@@ -262,20 +281,20 @@ class ThinkModeService {
         // 添加AI分析结果
         addMessageToUI(analysisResult, 'ai');
                   
-                  // 保存会话
-                  if (typeof saveCurrentSession === 'function') {
-                    saveCurrentSession();
-                  }
+        // 保存会话
+        if (typeof saveCurrentSession === 'function') {
+          saveCurrentSession();
+        }
                   
         // 移除成功提示，用户可以从界面看到结果
         console.log('Think模式: 分析完成');
-                } else {
+      } else {
         // 保留这个错误提示，因为这是用户无法从界面察觉的错误
         console.error('Think模式: 分析完成但无法显示结果');
         app.showMessage('分析完成，但无法显示结果', 'warning');
-          }
+      }
           
-          // 保存分析记录
+      // 保存分析记录
       this.saveThinkResult(content, systemPrompt, analysisResult);
       
     } catch (error) {
