@@ -1056,7 +1056,7 @@ function handleSubmit(event) {
     showThinkingIndicator();
     
     // 检查模式选择
-    const isTrizMode = window.trizService?.isActive || false;
+    const isTrizMode = window.trizService?.isActive || deepSearchToggle.checked || false;
     const isStreamingMode = streamToggle.checked;
     const isThinkingMode = thinkToggle.checked;
     

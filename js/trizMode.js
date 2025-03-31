@@ -8,6 +8,9 @@ class TrizModeService {
     document.addEventListener('DOMContentLoaded', () => {
       this.initTrizButton();
       this.initSubmitButtonListener();
+      
+      // 检查deepSearchToggle状态，同步按钮状态
+      this.syncButtonState();
     });
     
     // TRIZ专利分析提示词
@@ -163,11 +166,23 @@ class TrizModeService {
       // 激活TRIZ模式
       this.isActive = true;
       trizBtn.classList.add('active');
+      
+      // 全局变量更新，确保与script.js中的handleSubmit函数兼容
+      if (window.deepSearchToggle) {
+        window.deepSearchToggle.checked = true;
+      }
+      
       console.log('TRIZ模式: 已开启，等待用户提交专利内容');
     } else {
       // 关闭TRIZ模式
       this.isActive = false;
       trizBtn.classList.remove('active');
+      
+      // 全局变量更新，确保与script.js中的handleSubmit函数兼容
+      if (window.deepSearchToggle) {
+        window.deepSearchToggle.checked = false;
+      }
+      
       console.log('TRIZ模式: 已关闭');
       // 清除TRIZ提示词
       this.clearTrizPrompt();
@@ -304,6 +319,25 @@ class TrizModeService {
     }
     
     console.log('TRIZ按钮状态已刷新');
+  }
+  
+  // 同步按钮状态和deepSearchToggle
+  syncButtonState() {
+    setTimeout(() => {
+      const trizBtn = document.querySelector('.search-btn');
+      if (!trizBtn) return;
+      
+      // 如果deepSearchToggle存在并且已选中，使按钮处于激活状态
+      if (window.deepSearchToggle && window.deepSearchToggle.checked) {
+        this.isActive = true;
+        trizBtn.classList.add('active');
+        console.log('初始化TRIZ按钮状态为激活');
+      } else {
+        this.isActive = false;
+        trizBtn.classList.remove('active');
+        console.log('初始化TRIZ按钮状态为未激活');
+      }
+    }, 500); // 稍微延迟，确保DOM和deepSearchToggle已初始化
   }
 }
 
