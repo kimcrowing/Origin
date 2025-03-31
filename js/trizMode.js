@@ -167,6 +167,13 @@ class TrizModeService {
       this.isActive = true;
       trizBtn.classList.add('active');
       
+      // 确保图标和文本颜色更改为蓝色
+      const trizIcon = trizBtn.querySelector('i');
+      const trizText = trizBtn.querySelector('span');
+      
+      if (trizIcon) trizIcon.style.color = '#4a7bff';
+      if (trizText) trizText.style.color = '#4a7bff';
+      
       // 全局变量更新，确保与script.js中的handleSubmit函数兼容
       if (window.deepSearchToggle) {
         window.deepSearchToggle.checked = true;
@@ -177,6 +184,13 @@ class TrizModeService {
       // 关闭TRIZ模式
       this.isActive = false;
       trizBtn.classList.remove('active');
+      
+      // 恢复图标和文本默认颜色
+      const trizIcon = trizBtn.querySelector('i');
+      const trizText = trizBtn.querySelector('span');
+      
+      if (trizIcon) trizIcon.style.color = '';
+      if (trizText) trizText.style.color = '';
       
       // 全局变量更新，确保与script.js中的handleSubmit函数兼容
       if (window.deepSearchToggle) {
@@ -331,10 +345,26 @@ class TrizModeService {
       if (window.deepSearchToggle && window.deepSearchToggle.checked) {
         this.isActive = true;
         trizBtn.classList.add('active');
+        
+        // 确保图标和文本颜色更改为蓝色
+        const trizIcon = trizBtn.querySelector('i');
+        const trizText = trizBtn.querySelector('span');
+        
+        if (trizIcon) trizIcon.style.color = '#4a7bff';
+        if (trizText) trizText.style.color = '#4a7bff';
+        
         console.log('初始化TRIZ按钮状态为激活');
       } else {
         this.isActive = false;
         trizBtn.classList.remove('active');
+        
+        // 恢复图标和文本默认颜色
+        const trizIcon = trizBtn.querySelector('i');
+        const trizText = trizBtn.querySelector('span');
+        
+        if (trizIcon) trizIcon.style.color = '';
+        if (trizText) trizText.style.color = '';
+        
         console.log('初始化TRIZ按钮状态为未激活');
       }
     }, 500); // 稍微延迟，确保DOM和deepSearchToggle已初始化
