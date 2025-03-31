@@ -120,12 +120,15 @@ class ThinkModeService {
         // 使用识别的技术领域进行分析
         this.performAutoAnalysis(contentToAnalyze, field);
       } else {
+        // 仅记录日志，不显示弹窗提示
         console.log('Think模式: 没有可分析的内容');
-        app.showMessage('没有检测到可分析的内容，请输入内容或上传文档', 'warning');
+        // 移除弹窗提示
+        // app.showMessage('没有检测到可分析的内容，请输入内容或上传文档', 'warning');
       }
     } catch (error) {
       console.error('Think模式分析错误:', error);
-      app.showMessage('内容分析失败，请重试', 'error');
+      // 错误信息也移除弹窗
+      // app.showMessage('内容分析失败，请重试', 'error');
     }
   }
   
@@ -161,13 +164,13 @@ class ThinkModeService {
     
     // 检查登录状态
     if (!isUserLoggedIn) {
-      app.showMessage('请先登录后使用Think分析功能', 'error');
+      console.error('Think模式: 用户未登录');
       return;
     }
     
     // 检查在线状态
     if (!authService.isOnline) {
-      app.showMessage('Think模式需要在线连接', 'error');
+      console.error('Think模式: 系统离线');
       return;
     }
     
@@ -209,8 +212,8 @@ class ThinkModeService {
     console.log('Think模式: 使用系统提示词', systemPrompt);
     
     try {
-      // 显示分析中的状态
-      app.showMessage('正在进行深度分析...', 'info', false);
+      // 移除状态提示，只记录到控制台
+      console.log('Think模式: 开始分析内容');
       
       // 调用API进行分析
       const analysisResult = await apiService.getCompletion(
@@ -226,22 +229,26 @@ class ThinkModeService {
         
         // 添加AI分析结果
         addMessageToUI(analysisResult, 'ai');
-                  
-                  // 保存会话
-                  if (typeof saveCurrentSession === 'function') {
-                    saveCurrentSession();
-                  }
-                  
-        app.showMessage('深度分析完成', 'success');
-                } else {
+        
+        // 保存会话
+        if (typeof saveCurrentSession === 'function') {
+          saveCurrentSession();
+        }
+        
+        // 移除成功提示，用户可以从界面看到结果
+        console.log('Think模式: 分析完成');
+      } else {
+        // 保留这个错误提示，因为这是用户无法从界面察觉的错误
+        console.error('Think模式: 分析完成但无法显示结果');
         app.showMessage('分析完成，但无法显示结果', 'warning');
-          }
-          
-          // 保存分析记录
+      }
+      
+      // 保存分析记录
       this.saveThinkResult(content, systemPrompt, analysisResult);
       
     } catch (error) {
       console.error('执行Think分析失败:', error);
+      // 保留这个错误提示，因为这是用户需要知道的错误
       app.showMessage('分析过程中发生错误，请稍后再试', 'error');
     }
   }
