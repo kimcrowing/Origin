@@ -13,18 +13,6 @@ class ApiService {
     }
 
     /**
-     * 根据模型名称获取对应的provider配置
-     * @param {string} model 模型名称
-     * @returns {Object} provider配置
-     */
-    getProviderConfig(model) {
-        if (model && model.startsWith('opencode/') && this.config?.opencode) {
-            return this.config.opencode;
-        }
-        return this.config;
-    }
-
-    /**
      * 初始化API服务
      */
     async init() {
@@ -95,14 +83,14 @@ class ApiService {
                 });
             }
             
-            const resolvedModel = model || this.config.defaultModel;
-            const provider = this.getProviderConfig(resolvedModel);
-
-            const apiModel = resolvedModel.startsWith('opencode/') ? resolvedModel.slice('opencode/'.length) : resolvedModel;
+            let resolvedModel = model || this.config.defaultModel;
+            if (resolvedModel && resolvedModel.startsWith('opencode/')) {
+                resolvedModel = this.config.opencode_aliases?.[resolvedModel] || this.config.defaultModel;
+            }
 
             // 准备请求参数
             const requestBody = {
-                model: apiModel,
+                model: resolvedModel,
                 messages: contextWindow,
                 stream: stream
             };
@@ -118,24 +106,17 @@ class ApiService {
                 });
             }
 
-            // 调用API（opencode免费模型不需要API Key）
             const headers = {
                 'Content-Type': 'application/json',
-                'HTTP-Referer': provider.referer,
-                'X-Title': provider.title
+                'HTTP-Referer': this.config.referer,
+                'X-Title': this.config.title
             };
-            const apiKey = provider.getKey();
+            const apiKey = this.config.getKey();
             if (apiKey) {
                 headers['Authorization'] = `Bearer ${apiKey}`;
             }
 
-            // 如果配置了CORS代理，包装请求URL以解决跨域问题
-            let apiUrl = provider.url;
-            const corsProxy = provider.cors_proxy;
-            if (corsProxy && corsProxy.length > 0) {
-                apiUrl = corsProxy + encodeURIComponent(apiUrl);
-                console.log('[CORS] 使用代理:', corsProxy);
-            }
+            const apiUrl = this.config.url;
 
             const response = await fetch(apiUrl, {
                 method: 'POST',

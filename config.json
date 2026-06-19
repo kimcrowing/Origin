@@ -2,7 +2,7 @@
   "api": {
     "key_encrypted": "U2FsdGVkX18lYIANUHzBKWd2fxT7FOPcOCXgPzGhSjxRRV45WjggnrsZ+2fAZ6ezhnv9mzbd5wqnypPOU1+tgvliwjVScdGXdguPfbsbRoDU2rlalAJBJVwnCUfBJeCq",
     "url": "https://openrouter.ai/api/v1/chat/completions",
-    "default_model": "opencode/deepseek-v4-flash-free",
+    "default_model": "deepseek/deepseek-chat-v3-0324:free",
     "referer": "http://localhost",
     "title": "AI Chat Test",
     "key_segments": {
@@ -10,14 +10,6 @@
       "segment2": "U2FsdGVkX19ZIBUWOT1R0LrEUa4qDzRzB5AD/HFxJNZzBWH0SMMOd5m0095+H/NA",
       "segment3": "U2FsdGVkX19+iBz/oX1t0USa2u6dG5RgK+YM4rrzFMzkoNPOk84vHL6PdGEptWVM"
     }
-  },
-  "opencode": {
-    "key_encrypted": "",
-    "url": "https://opencode.ai/zen/v1/chat/completions",
-    "default_model": "opencode/deepseek-v4-flash-free",
-    "referer": "https://opencode.ai",
-    "title": "Origin",
-    "cors_proxy": "https://corsproxy.io/?url="
   },
   "api_key": "sk-1234567890abcdef",
   "api_base": "https://api.deepseek.com/v1",
