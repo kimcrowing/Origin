@@ -35,7 +35,7 @@ let sessions = [];
 let currentSessionId = null;
 
 // 当前所选模型
-let currentModel = 'deepseek/deepseek-r1:free';
+let currentModel = 'opencode/deepseek-v4-flash-free';
 
 // 专利答审提示词
 const PATENT_RESPONSE_PROMPT = `你是一位专业的专利代理人，请根据审查意见通知书的内容，帮助申请人准备专利答复意见。请按照以下步骤进行：
@@ -2487,9 +2487,9 @@ function showAdminPanel() {
                             <div class="input-group">
                                 <label>默认模型</label>
                                 <select id="default-model">
-                                    <option value="deepseek/deepseek-r1:free">DeepSeek R1 (免费)</option>
                                     <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek Chat V3 (免费)</option>
-                                    <option value="opencode/deepseek-v4-flash-free">OpenCode V4 Flash (免费)</option>
+                                    <option value="deepseek/deepseek-r1:free">DeepSeek R1 (免费)</option>
+                                    <option value="opencode/deepseek-v4-flash-free" selected>OpenCode V4 Flash (免费)</option>
                                     <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
                                     <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
                                 </select>

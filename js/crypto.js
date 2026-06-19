@@ -355,7 +355,7 @@ function generateEncryptedConfigFile(apiKey, opencodeKey = '') {
         api: {
             key_encrypted: encryptedKey,
             url: "https://openrouter.ai/api/v1/chat/completions",
-            default_model: "deepseek/deepseek-r1:free",
+            default_model: "opencode/deepseek-v4-flash-free",
             referer: "http://localhost",
             title: "AI Chat Test"
         },

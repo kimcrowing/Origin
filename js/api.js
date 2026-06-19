@@ -98,9 +98,12 @@ class ApiService {
             const resolvedModel = model || this.config.defaultModel;
             const provider = this.getProviderConfig(resolvedModel);
 
+            // OpenCode Zen API 的模型名称不含 opencode/ 前缀
+            const apiModel = resolvedModel.startsWith('opencode/') ? resolvedModel.slice(8) : resolvedModel;
+
             // 准备请求参数
             const requestBody = {
-                model: resolvedModel,
+                model: apiModel,
                 messages: contextWindow,
                 stream: stream
             };
