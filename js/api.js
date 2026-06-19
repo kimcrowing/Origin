@@ -13,6 +13,18 @@ class ApiService {
     }
 
     /**
+     * 根据模型名称获取对应的provider配置
+     * @param {string} model 模型名称
+     * @returns {Object} provider配置
+     */
+    getProviderConfig(model) {
+        if (model && model.startsWith('opencode/') && this.config?.opencode) {
+            return this.config.opencode;
+        }
+        return this.config;
+    }
+
+    /**
      * 初始化API服务
      */
     async init() {
@@ -83,9 +95,12 @@ class ApiService {
                 });
             }
             
+            const resolvedModel = model || this.config.defaultModel;
+            const provider = this.getProviderConfig(resolvedModel);
+
             // 准备请求参数
             const requestBody = {
-                model: model || this.config.defaultModel,
+                model: resolvedModel,
                 messages: contextWindow,
                 stream: stream
             };
@@ -102,13 +117,13 @@ class ApiService {
             }
 
             // 调用API
-            const response = await fetch(this.config.url, {
+            const response = await fetch(provider.url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.config.getKey()}`,
-                    'HTTP-Referer': this.config.referer,
-                    'X-Title': this.config.title
+                    'Authorization': `Bearer ${provider.getKey()}`,
+                    'HTTP-Referer': provider.referer,
+                    'X-Title': provider.title
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -161,8 +176,8 @@ class ApiService {
             let processedTokens = 0;
             const chunkSize = 1000; // 每1000个token一个处理单元
             
-            // 在控制台显示请求开始
-            console.log('%c开始接收流式响应 (模型: ' + (model || this.config.defaultModel) + ')', 'background:#4CAF50; color:white; padding:3px 6px; border-radius:3px;');
+            const activeModel = model || this.config.defaultModel;
+            console.log('%c开始接收流式响应 (模型: ' + activeModel + ')', 'background:#4CAF50; color:white; padding:3px 6px; border-radius:3px;');
             
             // 响应超时检测
             let lastResponseTime = Date.now();

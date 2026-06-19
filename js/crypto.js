@@ -305,7 +305,15 @@ async function loadApiConfig() {
                     url: config.api.url,
                     defaultModel: config.api.default_model,
                     referer: config.api.referer,
-                    title: config.api.title
+                    title: config.api.title,
+                    opencode: config.opencode ? {
+                        ...config.opencode,
+                        getKey: () => config.opencode.key_encrypted ? decryptApiKey(config.opencode.key_encrypted) : '',
+                        url: config.opencode.url,
+                        defaultModel: config.opencode.default_model,
+                        referer: config.opencode.referer,
+                        title: config.opencode.title
+                    } : null
                 };
             } catch (error) {
                 console.error('API密钥解密失败:', error);
@@ -321,12 +329,27 @@ async function loadApiConfig() {
 }
 
 /**
+ * 加载OpenCode API配置
+ * @returns {Promise<Object|null>} OpenCode配置对象
+ */
+async function loadOpenCodeConfig() {
+    try {
+        const config = await loadApiConfig();
+        return config.opencode || null;
+    } catch (error) {
+        console.error('加载OpenCode配置失败:', error);
+        return null;
+    }
+}
+
+/**
  * 工具函数：生成加密密钥文件内容（仅供管理员使用）
  * @param {string} apiKey 要加密的API密钥
  * @returns {string} 加密后的配置JSON字符串
  */
-function generateEncryptedConfigFile(apiKey) {
+function generateEncryptedConfigFile(apiKey, opencodeKey = '') {
     const encryptedKey = encryptApiKey(apiKey);
+    const encryptedOpenCodeKey = opencodeKey ? encryptApiKey(opencodeKey) : '';
     const config = {
         api: {
             key_encrypted: encryptedKey,
@@ -334,6 +357,13 @@ function generateEncryptedConfigFile(apiKey) {
             default_model: "deepseek/deepseek-r1:free",
             referer: "http://localhost",
             title: "AI Chat Test"
+        },
+        opencode: {
+            key_encrypted: encryptedOpenCodeKey,
+            url: "https://opencode.ai/zen/v1/chat/completions",
+            default_model: "opencode/deepseek-v4-flash-free",
+            referer: "http://localhost",
+            title: "Origin"
         }
     };
     return JSON.stringify(config, null, 2);

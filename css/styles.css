@@ -742,6 +742,12 @@ button:focus {
     font-weight: 500;
 }
 
+.model-dropdown-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 4px 0;
+}
+
 /* 不再需要的样式，进行注释
 .model-dropdown-item .model-description {
     font-size: 12px;
