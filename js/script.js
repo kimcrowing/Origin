@@ -2488,6 +2488,8 @@ function showAdminPanel() {
                                 <label>默认模型</label>
                                 <select id="default-model">
                                     <option value="deepseek/deepseek-r1:free">DeepSeek R1 (免费)</option>
+                                    <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek Chat V3 (免费)</option>
+                                    <option value="opencode/deepseek-v4-flash-free">OpenCode V4 Flash (免费)</option>
                                     <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
                                     <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
                                 </select>
@@ -3590,24 +3592,23 @@ function initModelSelector() {
         item.addEventListener('click', function() {
             // 获取选中的模型
             const selectedModel = this.getAttribute('data-model');
+            if (!selectedModel) return;
             
             // 更新当前模型
-            if (selectedModel) {
-                currentModel = selectedModel;
-                
-                // 更新UI
-                modelItems.forEach(mi => mi.classList.remove('selected'));
-                this.classList.add('selected');
-                
-                // 更新选择器显示的文本
-                const modelName = this.querySelector('.model-name').textContent;
-                modelSelector.querySelector('span').textContent = modelName;
-                
-                // 关闭下拉菜单
-                modelSelector.classList.remove('active');
-                
-                console.log('已选择模型:', currentModel);
-            }
+            currentModel = selectedModel;
+            
+            // 更新UI
+            modelItems.forEach(mi => mi.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            // 更新选择器显示的文本
+            const modelName = this.querySelector('.model-name').textContent;
+            modelSelector.querySelector('span').textContent = modelName;
+            
+            // 关闭下拉菜单
+            modelSelector.classList.remove('active');
+            
+            console.log('已选择模型:', currentModel);
         });
     });
     
