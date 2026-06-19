@@ -312,7 +312,8 @@ async function loadApiConfig() {
                         url: config.opencode.url,
                         defaultModel: config.opencode.default_model,
                         referer: config.opencode.referer,
-                        title: config.opencode.title
+                        title: config.opencode.title,
+                        cors_proxy: config.opencode.cors_proxy
                     } : null
                 };
             } catch (error) {
