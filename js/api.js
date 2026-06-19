@@ -116,15 +116,20 @@ class ApiService {
                 });
             }
 
-            // 调用API
+            // 调用API（opencode免费模型不需要API Key）
+            const headers = {
+                'Content-Type': 'application/json',
+                'HTTP-Referer': provider.referer,
+                'X-Title': provider.title
+            };
+            const apiKey = provider.getKey();
+            if (apiKey) {
+                headers['Authorization'] = `Bearer ${apiKey}`;
+            }
+
             const response = await fetch(provider.url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${provider.getKey()}`,
-                    'HTTP-Referer': provider.referer,
-                    'X-Title': provider.title
-                },
+                headers: headers,
                 body: JSON.stringify(requestBody)
             });
 
