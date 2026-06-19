@@ -15,8 +15,9 @@
     "key_encrypted": "",
     "url": "https://opencode.ai/zen/v1/chat/completions",
     "default_model": "opencode/deepseek-v4-flash-free",
-    "referer": "http://localhost",
-    "title": "Origin"
+    "referer": "https://opencode.ai",
+    "title": "Origin",
+    "cors_proxy": "https://corsproxy.io/?url="
   },
   "api_key": "sk-1234567890abcdef",
   "api_base": "https://api.deepseek.com/v1",

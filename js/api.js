@@ -127,7 +127,15 @@ class ApiService {
                 headers['Authorization'] = `Bearer ${apiKey}`;
             }
 
-            const response = await fetch(provider.url, {
+            // 如果配置了CORS代理，包装请求URL以解决跨域问题
+            let apiUrl = provider.url;
+            const corsProxy = provider.cors_proxy;
+            if (corsProxy && corsProxy.length > 0) {
+                apiUrl = corsProxy + encodeURIComponent(apiUrl);
+                console.log('[CORS] 使用代理:', corsProxy);
+            }
+
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(requestBody)
